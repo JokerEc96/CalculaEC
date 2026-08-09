@@ -6,9 +6,7 @@ export default function Home() {
 const [showTools, setShowTools] = useState(false);
 
 return (
-
-
-
+  <main>
     <header className="flex items-center justify-between">
       <div>
         <div className="text-2xl font-bold tracking-tight">
@@ -161,9 +159,6 @@ return (
     <footer className="mt-12 border-t border-[var(--border)] py-8 text-center text-xs text-[var(--muted)]">
       © {new Date().getFullYear()} CalculaEC · Herramientas para Ecuador
     </footer>
-
-  </section>
-</main>
-
+  </main>
 );
 }
