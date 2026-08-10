@@ -40,26 +40,6 @@ function getSql() {
   return neon(databaseUrl);
 }
 
-async function ensureFuelPricesTable(
-  sql: ReturnType<typeof neon>,
-): Promise<void> {
-  await sql`
-    CREATE TABLE IF NOT EXISTS fuel_prices (
-      fuel_type TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      price_per_gallon DOUBLE PRECISION NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'USD',
-      valid_from TIMESTAMPTZ,
-      valid_until TIMESTAMPTZ,
-      source TEXT,
-      source_url TEXT,
-      updated_at TIMESTAMPTZ,
-      saved_at TIMESTAMPTZ NOT NULL,
-      source_status TEXT NOT NULL CHECK (source_status IN ('official', 'secondary'))
-    )
-  `;
-}
-
 /**
  * Returns the most recently persisted valid fuel prices.
  * If Neon is not configured or the database is temporarily unavailable,
@@ -73,7 +53,21 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
   }
 
   try {
-    await ensureFuelPricesTable(sql);
+    await sql`
+      CREATE TABLE IF NOT EXISTS fuel_prices (
+        fuel_type TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        price_per_gallon DOUBLE PRECISION NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'USD',
+        valid_from TIMESTAMPTZ,
+        valid_until TIMESTAMPTZ,
+        source TEXT,
+        source_url TEXT,
+        updated_at TIMESTAMPTZ,
+        saved_at TIMESTAMPTZ NOT NULL,
+        source_status TEXT NOT NULL CHECK (source_status IN ('official', 'secondary'))
+      )
+    `;
 
     const rows = await sql<CachedFuelPriceRow[]>`
       SELECT
@@ -120,7 +114,7 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
 }
 
 /**
- * Persists valid fuel prices in Neon while preserving the existing cache API.
+ * Persists valid fuel prices in Neon.
  * Records without a positive numeric price are not persisted.
  */
 export async function setCachedFuelPrices(
@@ -144,10 +138,24 @@ export async function setCachedFuelPrices(
   }
 
   try {
-    await ensureFuelPricesTable(sql);
+    await sql`
+      CREATE TABLE IF NOT EXISTS fuel_prices (
+        fuel_type TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        price_per_gallon DOUBLE PRECISION NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'USD',
+        valid_from TIMESTAMPTZ,
+        valid_until TIMESTAMPTZ,
+        source TEXT,
+        source_url TEXT,
+        updated_at TIMESTAMPTZ,
+        saved_at TIMESTAMPTZ NOT NULL,
+        source_status TEXT NOT NULL CHECK (source_status IN ('official', 'secondary'))
+      )
+    `;
 
-    const queries = validPrices.map(
-      (price) => sql`
+    for (const price of validPrices) {
+      await sql`
         INSERT INTO fuel_prices (
           fuel_type,
           name,
@@ -184,10 +192,8 @@ export async function setCachedFuelPrices(
           updated_at = EXCLUDED.updated_at,
           saved_at = EXCLUDED.saved_at,
           source_status = EXCLUDED.source_status
-      `,
-    );
-
-    await sql.transaction(queries);
+      `;
+    }
   } catch (error) {
     console.warn("Fuel price cache write failed", error);
   }
