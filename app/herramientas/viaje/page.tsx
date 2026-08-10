@@ -6,14 +6,21 @@ import { useEffect, useState } from "react";
 import { calculateFuelNeeded, calculateTripFuel } from "@/lib/fuel";
 import type { FuelPriceRecord, FuelPricesResponse } from "@/lib/fuel-price-types";
 
-const TripMap = dynamic(() => import("@/components/TripMap"), {
+const TripMap = dynamic(() => import("@/components/TripMap"), { ssr: false });
+const LocationPickerMap = dynamic(() => import("@/components/LocationPickerMap"), {
   ssr: false,
 });
+
+type Coordinate = [number, number];
 
 type GeocodeResult = {
   displayName: string;
   lat: number;
   lng: number;
+};
+
+type ReverseGeocodeResult = {
+  displayName: string | null;
 };
 
 type RouteResponse = {
@@ -35,6 +42,9 @@ export default function TripCalculatorPage() {
   const [mode, setMode] = useState<"ruta" | "kilometros">("ruta");
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
+  const [originCoordinate, setOriginCoordinate] = useState<Coordinate | null>(null);
+  const [destinationCoordinate, setDestinationCoordinate] = useState<Coordinate | null>(null);
+  const [pickerTarget, setPickerTarget] = useState<"origin" | "destination" | null>(null);
   const [consumption, setConsumption] = useState("");
   const [fuelType, setFuelType] = useState<FuelPriceRecord["type"]>("ecopais");
   const [fuelPrices, setFuelPrices] = useState<FuelPriceRecord[]>([]);
@@ -82,14 +92,11 @@ export default function TripCalculatorPage() {
           setFuelPricesError("No pudimos obtener los precios de combustible.");
         }
       } finally {
-        if (!cancelled) {
-          setIsLoadingPrices(false);
-        }
+        if (!cancelled) setIsLoadingPrices(false);
       }
     }
 
     void loadFuelPrices();
-
     return () => {
       cancelled = true;
     };
@@ -98,7 +105,6 @@ export default function TripCalculatorPage() {
   const selectedFuel = fuelPrices.find((fuel) => fuel.type === fuelType) ?? null;
   const selectedPrice = selectedFuel?.pricePerGallon ?? null;
   const hasValidPrice = selectedPrice !== null && Number.isFinite(selectedPrice) && selectedPrice > 0;
-
   const fuelSourceLabel =
     fuelSourceStatus === "official"
       ? "Fuente oficial"
@@ -111,16 +117,12 @@ export default function TripCalculatorPage() {
     const response = await fetch(`/api/geocode?${params.toString()}`);
     const data = (await response.json()) as GeocodeResult[] | { error?: string };
 
-    if (!response.ok) {
-      throw new Error("No pudimos buscar una de las ubicaciones.");
-    }
-
+    if (!response.ok) throw new Error("No pudimos buscar una de las ubicaciones.");
     if (!Array.isArray(data) || data.length === 0) {
       throw new Error(`No encontramos resultados para "${query}".`);
     }
 
     const result = data[0];
-
     if (
       !result ||
       typeof result.lat !== "number" ||
@@ -134,6 +136,42 @@ export default function TripCalculatorPage() {
     return result;
   }
 
+  async function reverseGeocode(coordinate: Coordinate): Promise<string | null> {
+    const params = new URLSearchParams({ lat: String(coordinate[0]), lng: String(coordinate[1]) });
+    const response = await fetch(`/api/geocode/reverse?${params.toString()}`);
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as ReverseGeocodeResult;
+    return typeof data.displayName === "string" && data.displayName.trim()
+      ? data.displayName
+      : null;
+  }
+
+  async function handleMapConfirm(coordinate: Coordinate) {
+    const target = pickerTarget;
+    if (!target) return;
+
+    setError(null);
+    if (target === "origin") {
+      setOriginCoordinate(coordinate);
+    } else {
+      setDestinationCoordinate(coordinate);
+    }
+
+    setPickerTarget(null);
+
+    try {
+      const displayName = await reverseGeocode(coordinate);
+      const fallback = `${coordinate[0].toFixed(5)}, ${coordinate[1].toFixed(5)}`;
+      if (target === "origin") setOrigin(displayName ?? fallback);
+      else setDestination(displayName ?? fallback);
+    } catch {
+      const fallback = `${coordinate[0].toFixed(5)}, ${coordinate[1].toFixed(5)}`;
+      if (target === "origin") setOrigin(fallback);
+      else setDestination(fallback);
+    }
+  }
+
   async function handleCalculateRoute(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -142,16 +180,14 @@ export default function TripCalculatorPage() {
     const destinationQuery = destination.trim();
     const parsedConsumption = Number(consumption);
 
-    if (!originQuery || !destinationQuery) {
-      setError("Ingresa tu punto de salida y tu destino para calcular la ruta.");
+    if ((!originQuery && !originCoordinate) || (!destinationQuery && !destinationCoordinate)) {
+      setError("Ingresa o selecciona tu punto de salida y tu destino.");
       return;
     }
-
     if (!consumption.trim()) {
       setError("Ingresa el consumo de tu vehículo para calcular el combustible.");
       return;
     }
-
     if (!Number.isFinite(parsedConsumption) || parsedConsumption <= 0) {
       setError("Ingresa un consumo válido mayor que cero.");
       return;
@@ -166,8 +202,12 @@ export default function TripCalculatorPage() {
 
     try {
       const [originLocation, destinationLocation] = await Promise.all([
-        geocodeLocation(originQuery),
-        geocodeLocation(destinationQuery),
+        originCoordinate
+          ? Promise.resolve({ lat: originCoordinate[0], lng: originCoordinate[1] })
+          : geocodeLocation(originQuery),
+        destinationCoordinate
+          ? Promise.resolve({ lat: destinationCoordinate[0], lng: destinationCoordinate[1] })
+          : geocodeLocation(destinationQuery),
       ]);
 
       const routeParams = new URLSearchParams({
@@ -209,6 +249,11 @@ export default function TripCalculatorPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function openPicker(target: "origin" | "destination") {
+    setError(null);
+    setPickerTarget(target);
   }
 
   return (
@@ -256,13 +301,43 @@ export default function TripCalculatorPage() {
             <form className="mt-7 space-y-5" onSubmit={handleCalculateRoute}>
               <div>
                 <label htmlFor="origin" className="text-sm font-medium">¿De dónde sales?</label>
-                <input id="origin" name="origin" type="text" value={origin} onChange={(event) => setOrigin(event.target.value)} placeholder="Ciudad o ubicación" autoComplete="street-address" className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input id="origin" name="origin" type="text" value={origin} onChange={(event) => { setOrigin(event.target.value); setOriginCoordinate(null); }} placeholder="Ciudad o ubicación" autoComplete="street-address" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
+                  <button type="button" onClick={() => openPicker("origin")} className="shrink-0 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--wine)]/30 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] motion-reduce:transition-none">
+                    📍 Elegir en mapa
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label htmlFor="destination" className="text-sm font-medium">¿A dónde vas?</label>
-                <input id="destination" name="destination" type="text" value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="Ciudad o ubicación" autoComplete="street-address" className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input id="destination" name="destination" type="text" value={destination} onChange={(event) => { setDestination(event.target.value); setDestinationCoordinate(null); }} placeholder="Ciudad o ubicación" autoComplete="street-address" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
+                  <button type="button" onClick={() => openPicker("destination")} className="shrink-0 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--wine)]/30 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] motion-reduce:transition-none">
+                    📍 Elegir en mapa
+                  </button>
+                </div>
               </div>
+
+              {pickerTarget && (
+                <div className="rounded-[1.75rem] border border-[var(--wine)]/15 bg-[var(--background)] p-3" aria-live="polite">
+                  <div className="mb-3 flex items-start justify-between gap-3 px-2 pt-1">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {pickerTarget === "origin" ? "Selecciona el punto de partida en el mapa" : "Selecciona el destino en el mapa"}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">Puedes tocar o hacer clic en cualquier punto y cambiarlo antes de confirmar.</p>
+                    </div>
+                    <button type="button" onClick={() => setPickerTarget(null)} className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--muted)] hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)]">
+                      Cerrar
+                    </button>
+                  </div>
+                  <LocationPickerMap
+                    initialCoordinate={pickerTarget === "origin" ? originCoordinate : destinationCoordinate}
+                    onConfirm={handleMapConfirm}
+                  />
+                </div>
+              )}
 
               <div>
                 <label htmlFor="consumption" className="text-sm font-medium">Consumo de tu vehículo</label>
@@ -281,9 +356,7 @@ export default function TripCalculatorPage() {
                 {fuelPricesError && <p role="status">{fuelPricesError}</p>}
                 {!isLoadingPrices && <p>{fuelSourceLabel}</p>}
                 {!isLoadingPrices && !fuelPricesError && !hasValidPrice && <p>Precio no disponible</p>}
-                {!isLoadingPrices && !fuelPricesError && hasValidPrice && selectedPrice !== null && (
-                  <p>Precio: ${selectedPrice.toFixed(2)}/gal</p>
-                )}
+                {!isLoadingPrices && !fuelPricesError && hasValidPrice && selectedPrice !== null && <p>Precio: ${selectedPrice.toFixed(2)}/gal</p>}
                 {selectedFuel?.source && <p>Fuente: {selectedFuel.source}</p>}
                 {selectedFuel?.sourceUrl && <p>Fuente: {selectedFuel.sourceUrl}</p>}
                 {selectedFuel?.updatedAt && <p>Actualizado: {selectedFuel.updatedAt}</p>}
