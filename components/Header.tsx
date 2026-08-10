@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const navigation = [
@@ -12,7 +13,7 @@ export default function Header() {
 
   return (
     <header className="relative flex items-center justify-between py-5">
-      <a
+      <Link
         href="/"
         className="group flex items-center gap-2"
         aria-label="CalculaEC, inicio"
@@ -20,7 +21,7 @@ export default function Header() {
         <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
           Calcula<span className="text-[var(--wine)]">EC</span>
         </span>
-      </a>
+      </Link>
 
       <nav className="hidden items-center gap-8 md:flex" aria-label="Navegación principal">
         {navigation.map((item) => (
