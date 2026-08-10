@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { calculateTripFuel } from "@/lib/fuel";
+import { useEffect, useState } from "react";
+import { calculateFuelNeeded, calculateTripFuel } from "@/lib/fuel";
 import TripMap from "@/components/TripMap";
 
 type GeocodeResult = {
@@ -19,21 +19,32 @@ type RouteResponse = {
   };
 };
 
-const fuelOptions = ["Ecopaís", "Súper", "Diésel"] as const;
-type FuelType = (typeof fuelOptions)[number];
+type FuelType = "ecopais" | "super" | "diesel";
 
-const fuelPrices: Record<FuelType, number> = {
-  Ecopaís: 0,
-  Súper: 0,
-  Diésel: 0,
+type FuelPrice = {
+  type: FuelType;
+  name: string;
+  pricePerGallon: number | null;
+  currency: "USD";
+  source: string;
+  updatedAt: string | null;
 };
+
+const fuelOptions = [
+  { value: "ecopais", label: "Ecopaís" },
+  { value: "super", label: "Súper" },
+  { value: "diesel", label: "Diésel" },
+] as const;
 
 export default function TripCalculatorPage() {
   const [mode, setMode] = useState<"ruta" | "kilometros">("ruta");
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [consumption, setConsumption] = useState("");
-  const [fuelType, setFuelType] = useState<FuelType>("Ecopaís");
+  const [fuelType, setFuelType] = useState<FuelType>("ecopais");
+  const [fuelPrices, setFuelPrices] = useState<FuelPrice[]>([]);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+  const [fuelPricesError, setFuelPricesError] = useState<string | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
@@ -41,6 +52,44 @@ export default function TripCalculatorPage() {
   const [fuelCost, setFuelCost] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFuelPrices() {
+      try {
+        const response = await fetch("/api/fuel-prices");
+        const data = (await response.json()) as FuelPrice[] | { error?: string };
+
+        if (!response.ok || !Array.isArray(data)) {
+          throw new Error("No pudimos obtener los precios de combustible.");
+        }
+
+        if (!cancelled) {
+          setFuelPrices(data);
+          setFuelPricesError(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setFuelPricesError("No pudimos obtener los precios de combustible.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingPrices(false);
+        }
+      }
+    }
+
+    void loadFuelPrices();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedFuel = fuelPrices.find((fuel) => fuel.type === fuelType) ?? null;
+  const selectedPrice = selectedFuel?.pricePerGallon ?? null;
+  const hasValidPrice = selectedPrice !== null && Number.isFinite(selectedPrice) && selectedPrice > 0;
 
   async function geocodeLocation(query: string): Promise<GeocodeResult> {
     const params = new URLSearchParams({ q: query });
@@ -126,16 +175,14 @@ export default function TripCalculatorPage() {
         throw new Error("No pudimos calcular una ruta entre esas ubicaciones.");
       }
 
-      const { gallons, cost } = calculateTripFuel(
-        data.distanceKm,
-        parsedConsumption,
-        fuelPrices[fuelType],
-      );
+      const fuelResult = hasValidPrice
+        ? calculateTripFuel(data.distanceKm, parsedConsumption, selectedPrice)
+        : calculateFuelNeeded(data.distanceKm, parsedConsumption);
 
       setDistanceKm(data.distanceKm);
       setDurationMinutes(data.durationMinutes);
-      setFuelGallons(gallons);
-      setFuelCost(cost);
+      setFuelGallons(fuelResult.gallons);
+      setFuelCost(hasValidPrice ? fuelResult.cost : null);
       setRouteCoordinates(data.geometry.coordinates);
     } catch (routeError) {
       setError(
@@ -209,8 +256,19 @@ export default function TripCalculatorPage() {
               <div>
                 <label htmlFor="fuel" className="text-sm font-medium">Tipo de combustible</label>
                 <select id="fuel" name="fuel" value={fuelType} onChange={(event) => setFuelType(event.target.value as FuelType)} className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none">
-                  {fuelOptions.map((fuel) => <option key={fuel} value={fuel}>{fuel}</option>)}
+                  {fuelOptions.map((fuel) => <option key={fuel.value} value={fuel.value}>{fuel.label}</option>)}
                 </select>
+              </div>
+
+              <div className="space-y-1 text-xs text-[var(--muted)]" aria-live="polite">
+                {isLoadingPrices && <p>Cargando precios de combustible…</p>}
+                {fuelPricesError && <p role="status">{fuelPricesError}</p>}
+                {!isLoadingPrices && !fuelPricesError && !hasValidPrice && <p>Precio no disponible</p>}
+                {!isLoadingPrices && !fuelPricesError && hasValidPrice && selectedPrice !== null && (
+                  <p>Precio: ${selectedPrice.toFixed(2)}/gal</p>
+                )}
+                {selectedFuel?.source && <p>Fuente: {selectedFuel.source}</p>}
+                {selectedFuel?.updatedAt && <p>Actualizado: {selectedFuel.updatedAt}</p>}
               </div>
 
               {error && <p role="alert" className="rounded-2xl border border-[var(--border)] bg-[var(--cream)] px-4 py-3 text-sm text-[var(--wine)]">{error}</p>}
@@ -235,7 +293,7 @@ export default function TripCalculatorPage() {
             {[
               ["Distancia", distanceKm === null ? "—" : `${distanceKm.toFixed(2)} km`],
               ["Combustible estimado", fuelGallons === null ? "—" : `${fuelGallons.toFixed(2)} gal`],
-              ["Costo estimado", fuelCost === null ? "—" : fuelCost === 0 ? "Pendiente" : `$${fuelCost.toFixed(2)}`],
+              ["Costo estimado", fuelCost === null ? "No disponible" : `$${fuelCost.toFixed(2)}`],
               ["Duración", durationMinutes === null ? "—" : `${durationMinutes.toFixed(0)} min`],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
