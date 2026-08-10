@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Header from "@/components/Header";
 import ToolsSection from "@/components/ToolsSection";
 import InfoSection from "@/components/InfoSection";
 
@@ -9,23 +10,7 @@ export default function Home() {
 
   return (
     <main>
-      <header className="flex items-center justify-between">
-        <div>
-          <div className="text-2xl font-bold tracking-tight">
-            Calcula<span className="text-[var(--wine)]">EC</span>
-          </div>
-          <p className="text-xs text-[var(--muted)]">
-            Herramientas útiles para Ecuador
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowTools(!showTools)}
-          className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-          Herramientas
-        </button>
-      </header>
+      <Header />
 
       <div className="mt-20 max-w-3xl">
         <p className="mb-4 text-sm font-medium text-[var(--wine)]">
@@ -43,8 +28,13 @@ export default function Home() {
         </p>
       </div>
 
-      <ToolsSection />
-      <InfoSection />
+      <section id="herramientas">
+        <ToolsSection />
+      </section>
+
+      <section id="indicadores">
+        <InfoSection />
+      </section>
 
       {showTools && (
         <section className="mt-6 rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
@@ -58,28 +48,6 @@ export default function Home() {
           </p>
         </section>
       )}
-
-      <section className="mt-10 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-5">
-          <p className="text-xs text-[var(--muted)]">
-            Precio actual de gasolinas en Ecuador
-          </p>
-
-          <p className="mt-2 text-sm font-medium">
-            Consulta los precios actuales
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-5">
-          <p className="text-xs text-[var(--muted)]">
-            Sueldo actual e IVA del Ecuador
-          </p>
-
-          <p className="mt-2 text-sm font-medium">
-            Información económica actual
-          </p>
-        </div>
-      </section>
 
       <div className="mt-10 flex min-h-24 items-center justify-center rounded-3xl border border-dashed border-[var(--border)]">
         <span className="text-xs text-[var(--muted)]">
