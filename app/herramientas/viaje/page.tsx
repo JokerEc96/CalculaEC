@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { calculateFuelNeeded, calculateTripFuel } from "@/lib/fuel";
+import type { FuelPriceRecord, FuelPricesResponse } from "@/lib/fuel-price-types";
 import TripMap from "@/components/TripMap";
 
 type GeocodeResult = {
@@ -19,26 +20,6 @@ type RouteResponse = {
   };
 };
 
-type FuelType = "ecopais" | "super" | "diesel";
-
-type FuelPrice = {
-  type: FuelType;
-  name: string;
-  pricePerGallon: number | null;
-  currency: "USD";
-  validFrom: string | null;
-  validUntil: string | null;
-  source: string | null;
-  sourceUrl: string | null;
-  updatedAt: string | null;
-};
-
-type FuelPricesResponse = {
-  prices: FuelPrice[];
-  fetchedAt: string;
-  sourceStatus: "official" | "secondary" | "unavailable";
-};
-
 const fuelOptions = [
   { value: "ecopais", label: "Ecopaís" },
   { value: "super", label: "Súper" },
@@ -50,8 +31,8 @@ export default function TripCalculatorPage() {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [consumption, setConsumption] = useState("");
-  const [fuelType, setFuelType] = useState<FuelType>("ecopais");
-  const [fuelPrices, setFuelPrices] = useState<FuelPrice[]>([]);
+  const [fuelType, setFuelType] = useState<FuelPriceRecord["type"]>("ecopais");
+  const [fuelPrices, setFuelPrices] = useState<FuelPriceRecord[]>([]);
   const [fuelSourceStatus, setFuelSourceStatus] = useState<FuelPricesResponse["sourceStatus"]>("unavailable");
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
   const [fuelPricesError, setFuelPricesError] = useState<string | null>(null);
@@ -284,7 +265,7 @@ export default function TripCalculatorPage() {
 
               <div>
                 <label htmlFor="fuel" className="text-sm font-medium">Tipo de combustible</label>
-                <select id="fuel" name="fuel" value={fuelType} onChange={(event) => setFuelType(event.target.value as FuelType)} className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none">
+                <select id="fuel" name="fuel" value={fuelType} onChange={(event) => setFuelType(event.target.value as FuelPriceRecord["type"])} className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none">
                   {fuelOptions.map((fuel) => <option key={fuel.value} value={fuel.value}>{fuel.label}</option>)}
                 </select>
               </div>
