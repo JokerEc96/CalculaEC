@@ -1,4 +1,5 @@
-import type { FuelPricesResponse, FuelPriceRecord } from "@/lib/fuel-price-types";
+import type { FuelPriceRecord, FuelPricesResponse } from "@/lib/fuel-price-types";
+import { getSecondaryFuelPrices } from "@/lib/fuel-price-secondary";
 import { OFFICIAL_SOURCES, SECONDARY_SOURCES } from "@/lib/fuel-price-sources";
 
 const emptyPrices: FuelPriceRecord[] = [
@@ -37,18 +38,38 @@ const emptyPrices: FuelPriceRecord[] = [
   },
 ];
 
+function hasValidPrices(response: FuelPricesResponse): boolean {
+  return response.prices.some(
+    (price) => price.pricePerGallon !== null && Number.isFinite(price.pricePerGallon) && price.pricePerGallon > 0,
+  );
+}
+
 export async function getFuelPrices(): Promise<FuelPricesResponse> {
-  // Fuente principal: consultar ARCH primero cuando se implemente el proveedor oficial.
-  // Segunda fuente oficial: consultar EP Petroecuador si ARCH no está disponible.
-  // Fallback secundario: recorrer las fuentes secundarias según prioridad.
-  // Validar formato, moneda, vigencia y coherencia antes de aceptar datos.
-  // Fallback final: utilizar el último precio válido persistido si las fuentes fallan.
-  // Por ahora no se realizan llamadas HTTP ni scraping.
-  const sources = [...OFFICIAL_SOURCES, ...SECONDARY_SOURCES].sort(
+  // Futuro proveedor oficial: consultar ARCH y, si no está disponible,
+  // consultar EP Petroecuador respetando el orden definido por prioridad.
+  // Actualmente no se realizan llamadas HTTP ni scraping desde esta capa.
+  const officialSources = [...OFFICIAL_SOURCES].sort(
     (a, b) => a.priority - b.priority,
   );
 
-  void sources;
+  // Mantener la arquitectura preparada para implementar los proveedores oficiales.
+  void officialSources;
+
+  // Cuando exista una implementación oficial, este bloque deberá devolverla
+  // si contiene al menos un precio válido y sourceStatus === "official".
+
+  const secondarySources = [...SECONDARY_SOURCES].sort(
+    (a, b) => a.priority - b.priority,
+  );
+
+  // Mantener la arquitectura preparada para proveedores secundarios ordenados.
+  void secondarySources;
+
+  const secondary = await getSecondaryFuelPrices();
+
+  if (secondary.sourceStatus === "secondary" && hasValidPrices(secondary)) {
+    return secondary;
+  }
 
   return {
     prices: emptyPrices,
