@@ -22,30 +22,17 @@ type CachedFuelPriceRow = {
 };
 
 function getDatabaseUrl(): string | null {
-  return (
-    process.env.STORAGE_URL ??
-    process.env.POSTGRES_URL ??
-    process.env.DATABASE_URL ??
-    null
-  );
+  return process.env.STORAGE_URL ?? process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? null;
 }
 
 function getSql() {
   const databaseUrl = getDatabaseUrl();
-
-  if (!databaseUrl) {
-    return null;
-  }
-
-  return neon(databaseUrl);
+  return databaseUrl ? neon(databaseUrl) : null;
 }
 
 export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
   const sql = getSql();
-
-  if (!sql) {
-    return null;
-  }
+  if (!sql) return null;
 
   try {
     await sql`
@@ -64,7 +51,7 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
       )
     `;
 
-    const rows: CachedFuelPriceRow[] = await sql`
+    const rows = (await sql`
       SELECT
         fuel_type,
         name,
@@ -79,13 +66,11 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
         source_status
       FROM fuel_prices
       ORDER BY fuel_type
-    `;
+    `) as unknown as CachedFuelPriceRow[];
 
-    if (rows.length === 0) {
-      return null;
-    }
-
+    if (rows.length === 0) return null;
     const first = rows[0];
+    if (!first) return null;
 
     return {
       prices: rows.map((row) => ({
@@ -108,25 +93,14 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
   }
 }
 
-export async function setCachedFuelPrices(
-  data: CachedFuelPrices,
-): Promise<void> {
+export async function setCachedFuelPrices(data: CachedFuelPrices): Promise<void> {
   const sql = getSql();
-
-  if (!sql) {
-    return;
-  }
+  if (!sql) return;
 
   const validPrices = data.prices.filter(
-    (price) =>
-      price.pricePerGallon !== null &&
-      Number.isFinite(price.pricePerGallon) &&
-      price.pricePerGallon > 0,
+    (price) => price.pricePerGallon !== null && Number.isFinite(price.pricePerGallon) && price.pricePerGallon > 0,
   );
-
-  if (validPrices.length === 0) {
-    return;
-  }
+  if (validPrices.length === 0) return;
 
   try {
     await sql`
@@ -148,29 +122,12 @@ export async function setCachedFuelPrices(
     for (const price of validPrices) {
       await sql`
         INSERT INTO fuel_prices (
-          fuel_type,
-          name,
-          price_per_gallon,
-          currency,
-          valid_from,
-          valid_until,
-          source,
-          source_url,
-          updated_at,
-          saved_at,
-          source_status
+          fuel_type, name, price_per_gallon, currency, valid_from, valid_until,
+          source, source_url, updated_at, saved_at, source_status
         ) VALUES (
-          ${price.type},
-          ${price.name},
-          ${price.pricePerGallon},
-          ${price.currency},
-          ${price.validFrom},
-          ${price.validUntil},
-          ${price.source},
-          ${price.sourceUrl},
-          ${price.updatedAt},
-          ${data.savedAt},
-          ${data.sourceStatus}
+          ${price.type}, ${price.name}, ${price.pricePerGallon}, ${price.currency},
+          ${price.validFrom}, ${price.validUntil}, ${price.source}, ${price.sourceUrl},
+          ${price.updatedAt}, ${data.savedAt}, ${data.sourceStatus}
         )
         ON CONFLICT (fuel_type) DO UPDATE SET
           name = EXCLUDED.name,
@@ -190,22 +147,10 @@ export async function setCachedFuelPrices(
   }
 }
 
-export function isCacheValid(
-  data: CachedFuelPrices,
-  maxAgeHours: number,
-): boolean {
-  if (!Number.isFinite(maxAgeHours) || maxAgeHours < 0) {
-    return false;
-  }
-
+export function isCacheValid(data: CachedFuelPrices, maxAgeHours: number): boolean {
+  if (!Number.isFinite(maxAgeHours) || maxAgeHours < 0) return false;
   const savedAt = Date.parse(data.savedAt);
-
-  if (!Number.isFinite(savedAt)) {
-    return false;
-  }
-
+  if (!Number.isFinite(savedAt)) return false;
   const ageMs = Date.now() - savedAt;
-  const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
-
-  return ageMs >= 0 && ageMs <= maxAgeMs;
+  return ageMs >= 0 && ageMs <= maxAgeHours * 60 * 60 * 1000;
 }
