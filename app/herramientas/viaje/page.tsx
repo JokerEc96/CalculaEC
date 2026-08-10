@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { calculateFuelNeeded, calculateTripFuel } from "@/lib/fuel";
 import type { FuelPriceRecord, FuelPricesResponse } from "@/lib/fuel-price-types";
@@ -210,12 +211,12 @@ export default function TripCalculatorPage() {
     <main className="min-h-screen w-full bg-[var(--background)]">
       <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         <header className="mb-10 flex items-center justify-between gap-4">
-          <a href="/" className="text-xl font-bold tracking-tight text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2">
+          <Link href="/" className="text-xl font-bold tracking-tight text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2">
             Calcula<span className="text-[var(--wine)]">EC</span>
-          </a>
-          <a href="/" className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--wine)] motion-reduce:transition-none">
+          </Link>
+          <Link href="/" className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--wine)] motion-reduce:transition-none">
             Volver al inicio
-          </a>
+          </Link>
         </header>
 
         <section aria-labelledby="trip-title" className="max-w-3xl">
