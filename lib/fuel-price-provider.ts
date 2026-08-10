@@ -31,7 +31,8 @@ function normalizeText(html: string): string {
 }
 
 function parsePrice(value: string): number | null {
-  const normalized = value.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  const raw = value.replace(/\s/g, "");
+  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
   const number = Number(normalized);
   return Number.isFinite(number) && number > 0 ? number : null;
 }
