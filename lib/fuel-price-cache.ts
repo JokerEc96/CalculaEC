@@ -40,11 +40,6 @@ function getSql() {
   return neon(databaseUrl);
 }
 
-/**
- * Returns the most recently persisted valid fuel prices.
- * If Neon is not configured or the database is temporarily unavailable,
- * the cache is treated as empty so the provider can continue safely.
- */
 export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
   const sql = getSql();
 
@@ -69,7 +64,7 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
       )
     `;
 
-    const rows = await sql<CachedFuelPriceRow[]>`
+    const rows: CachedFuelPriceRow[] = await sql`
       SELECT
         fuel_type,
         name,
@@ -113,10 +108,6 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
   }
 }
 
-/**
- * Persists valid fuel prices in Neon.
- * Records without a positive numeric price are not persisted.
- */
 export async function setCachedFuelPrices(
   data: CachedFuelPrices,
 ): Promise<void> {
