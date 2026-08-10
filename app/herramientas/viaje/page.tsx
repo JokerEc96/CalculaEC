@@ -108,6 +108,7 @@ export default function TripCalculatorPage() {
     if (nextMode === mode) return;
     invalidateCalculation();
     setMode(nextMode);
+    setTripType("oneWay");
     setPickerTarget(null);
     clearGeocodeResults();
     setError(null);
