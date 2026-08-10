@@ -1,3 +1,4 @@
+import { neon } from "@neondatabase/serverless";
 import type { FuelPriceRecord } from "@/lib/fuel-price-types";
 
 export type CachedFuelPrices = {
@@ -6,20 +7,190 @@ export type CachedFuelPrices = {
   sourceStatus: "official" | "secondary";
 };
 
-/**
- * Placeholder for a future persistent cache implementation.
- * No prices are stored in memory, files, cookies, localStorage, or environment variables.
- */
-export function getCachedFuelPrices(): CachedFuelPrices | null {
-  return null;
+type CachedFuelPriceRow = {
+  fuel_type: FuelPriceRecord["type"];
+  name: string;
+  price_per_gallon: number;
+  currency: "USD";
+  valid_from: string | null;
+  valid_until: string | null;
+  source: string | null;
+  source_url: string | null;
+  updated_at: string | null;
+  saved_at: string;
+  source_status: "official" | "secondary";
+};
+
+function getDatabaseUrl(): string | null {
+  return (
+    process.env.STORAGE_URL ??
+    process.env.POSTGRES_URL ??
+    process.env.DATABASE_URL ??
+    null
+  );
+}
+
+function getSql() {
+  const databaseUrl = getDatabaseUrl();
+
+  if (!databaseUrl) {
+    return null;
+  }
+
+  return neon(databaseUrl);
+}
+
+async function ensureFuelPricesTable(
+  sql: ReturnType<typeof neon>,
+): Promise<void> {
+  await sql`
+    CREATE TABLE IF NOT EXISTS fuel_prices (
+      fuel_type TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      price_per_gallon DOUBLE PRECISION NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      valid_from TIMESTAMPTZ,
+      valid_until TIMESTAMPTZ,
+      source TEXT,
+      source_url TEXT,
+      updated_at TIMESTAMPTZ,
+      saved_at TIMESTAMPTZ NOT NULL,
+      source_status TEXT NOT NULL CHECK (source_status IN ('official', 'secondary'))
+    )
+  `;
 }
 
 /**
- * Placeholder for a future persistent cache implementation.
- * A persistent storage provider can be connected here without changing the public API.
+ * Returns the most recently persisted valid fuel prices.
+ * If Neon is not configured or the database is temporarily unavailable,
+ * the cache is treated as empty so the provider can continue safely.
  */
-export function setCachedFuelPrices(_data: CachedFuelPrices): void {
-  // Intentionally left empty until persistent storage is configured.
+export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
+  const sql = getSql();
+
+  if (!sql) {
+    return null;
+  }
+
+  try {
+    await ensureFuelPricesTable(sql);
+
+    const rows = await sql<CachedFuelPriceRow[]>`
+      SELECT
+        fuel_type,
+        name,
+        price_per_gallon,
+        currency,
+        valid_from::text,
+        valid_until::text,
+        source,
+        source_url,
+        updated_at::text,
+        saved_at::text,
+        source_status
+      FROM fuel_prices
+      ORDER BY fuel_type
+    `;
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    const first = rows[0];
+
+    return {
+      prices: rows.map((row) => ({
+        type: row.fuel_type,
+        name: row.name,
+        pricePerGallon: Number(row.price_per_gallon),
+        currency: row.currency,
+        validFrom: row.valid_from,
+        validUntil: row.valid_until,
+        source: row.source,
+        sourceUrl: row.source_url,
+        updatedAt: row.updated_at,
+      })),
+      savedAt: first.saved_at,
+      sourceStatus: first.source_status,
+    };
+  } catch (error) {
+    console.warn("Fuel price cache read failed", error);
+    return null;
+  }
+}
+
+/**
+ * Persists valid fuel prices in Neon while preserving the existing cache API.
+ * Records without a positive numeric price are not persisted.
+ */
+export async function setCachedFuelPrices(
+  data: CachedFuelPrices,
+): Promise<void> {
+  const sql = getSql();
+
+  if (!sql) {
+    return;
+  }
+
+  const validPrices = data.prices.filter(
+    (price) =>
+      price.pricePerGallon !== null &&
+      Number.isFinite(price.pricePerGallon) &&
+      price.pricePerGallon > 0,
+  );
+
+  if (validPrices.length === 0) {
+    return;
+  }
+
+  try {
+    await ensureFuelPricesTable(sql);
+
+    const queries = validPrices.map(
+      (price) => sql`
+        INSERT INTO fuel_prices (
+          fuel_type,
+          name,
+          price_per_gallon,
+          currency,
+          valid_from,
+          valid_until,
+          source,
+          source_url,
+          updated_at,
+          saved_at,
+          source_status
+        ) VALUES (
+          ${price.type},
+          ${price.name},
+          ${price.pricePerGallon},
+          ${price.currency},
+          ${price.validFrom},
+          ${price.validUntil},
+          ${price.source},
+          ${price.sourceUrl},
+          ${price.updatedAt},
+          ${data.savedAt},
+          ${data.sourceStatus}
+        )
+        ON CONFLICT (fuel_type) DO UPDATE SET
+          name = EXCLUDED.name,
+          price_per_gallon = EXCLUDED.price_per_gallon,
+          currency = EXCLUDED.currency,
+          valid_from = EXCLUDED.valid_from,
+          valid_until = EXCLUDED.valid_until,
+          source = EXCLUDED.source,
+          source_url = EXCLUDED.source_url,
+          updated_at = EXCLUDED.updated_at,
+          saved_at = EXCLUDED.saved_at,
+          source_status = EXCLUDED.source_status
+      `,
+    );
+
+    await sql.transaction(queries);
+  } catch (error) {
+    console.warn("Fuel price cache write failed", error);
+  }
 }
 
 export function isCacheValid(
