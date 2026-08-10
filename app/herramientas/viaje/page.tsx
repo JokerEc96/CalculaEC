@@ -45,6 +45,7 @@ export default function TripCalculatorPage() {
   const [originCoordinate, setOriginCoordinate] = useState<Coordinate | null>(null);
   const [destinationCoordinate, setDestinationCoordinate] = useState<Coordinate | null>(null);
   const [pickerTarget, setPickerTarget] = useState<"origin" | "destination" | null>(null);
+  const [kilometers, setKilometers] = useState("");
   const [consumption, setConsumption] = useState("");
   const [fuelType, setFuelType] = useState<FuelPriceRecord["type"]>("ecopais");
   const [fuelPrices, setFuelPrices] = useState<FuelPriceRecord[]>([]);
@@ -112,6 +113,22 @@ export default function TripCalculatorPage() {
         ? "Fuente secundaria"
         : "Precio temporalmente no disponible";
 
+  function clearResults() {
+    setDistanceKm(null);
+    setDurationMinutes(null);
+    setFuelGallons(null);
+    setFuelCost(null);
+    setRouteCoordinates([]);
+    setError(null);
+  }
+
+  function changeMode(nextMode: "ruta" | "kilometros") {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    setPickerTarget(null);
+    clearResults();
+  }
+
   async function geocodeLocation(query: string): Promise<GeocodeResult> {
     const params = new URLSearchParams({ q: query });
     const response = await fetch(`/api/geocode?${params.toString()}`);
@@ -172,18 +189,11 @@ export default function TripCalculatorPage() {
     }
   }
 
-  async function handleCalculateRoute(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCalculate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
-    const originQuery = origin.trim();
-    const destinationQuery = destination.trim();
     const parsedConsumption = Number(consumption);
-
-    if ((!originQuery && !originCoordinate) || (!destinationQuery && !destinationCoordinate)) {
-      setError("Ingresa o selecciona tu punto de salida y tu destino.");
-      return;
-    }
     if (!consumption.trim()) {
       setError("Ingresa el consumo de tu vehículo para calcular el combustible.");
       return;
@@ -193,12 +203,51 @@ export default function TripCalculatorPage() {
       return;
     }
 
+    const parsedKilometers = Number(kilometers);
+    if (mode === "kilometros") {
+      if (!kilometers.trim()) {
+        setError("Ingresa los kilómetros del viaje.");
+        return;
+      }
+      if (!Number.isFinite(parsedKilometers) || parsedKilometers <= 0) {
+        setError("Ingresa una distancia válida mayor que cero.");
+        return;
+      }
+
+      setIsLoading(true);
+      clearResults();
+
+      try {
+        const { gallons } = calculateFuelNeeded(parsedKilometers, parsedConsumption);
+        const cost =
+          hasValidPrice && selectedPrice !== null
+            ? calculateTripFuel(parsedKilometers, parsedConsumption, selectedPrice).cost
+            : null;
+
+        setDistanceKm(parsedKilometers);
+        setFuelGallons(gallons);
+        setFuelCost(cost);
+      } catch (calculationError) {
+        setError(
+          calculationError instanceof Error
+            ? calculationError.message
+            : "No pudimos calcular el consumo del viaje.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    const originQuery = origin.trim();
+    const destinationQuery = destination.trim();
+    if ((!originQuery && !originCoordinate) || (!destinationQuery && !destinationCoordinate)) {
+      setError("Ingresa o selecciona tu punto de salida y tu destino.");
+      return;
+    }
+
     setIsLoading(true);
-    setDistanceKm(null);
-    setDurationMinutes(null);
-    setFuelGallons(null);
-    setFuelCost(null);
-    setRouteCoordinates([]);
+    clearResults();
 
     try {
       const [originLocation, destinationLocation] = await Promise.all([
@@ -231,9 +280,10 @@ export default function TripCalculatorPage() {
       }
 
       const { gallons } = calculateFuelNeeded(data.distanceKm, parsedConsumption);
-      const cost = hasValidPrice
-        ? calculateTripFuel(data.distanceKm, parsedConsumption, selectedPrice).cost
-        : null;
+      const cost =
+        hasValidPrice && selectedPrice !== null
+          ? calculateTripFuel(data.distanceKm, parsedConsumption, selectedPrice).cost
+          : null;
 
       setDistanceKm(data.distanceKm);
       setDurationMinutes(data.durationMinutes);
@@ -256,6 +306,20 @@ export default function TripCalculatorPage() {
     setPickerTarget(target);
   }
 
+  function formatDuration(minutes: number | null): string {
+    if (minutes === null) return "—";
+    const roundedMinutes = Math.round(minutes);
+    const hours = Math.floor(roundedMinutes / 60);
+    const remainingMinutes = roundedMinutes % 60;
+    if (hours === 0) return `${remainingMinutes} min`;
+    return `${hours} h ${String(remainingMinutes).padStart(2, "0")} min`;
+  }
+
+  const modeDescription =
+    mode === "ruta"
+      ? "Selecciona un origen y un destino para calcular la distancia real, tiempo, combustible y costo del viaje."
+      : "Si ya conoces la distancia, introduce directamente los kilómetros del viaje.";
+
   return (
     <main className="min-h-screen w-full bg-[var(--background)]">
       <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
@@ -276,66 +340,100 @@ export default function TripCalculatorPage() {
           </p>
         </section>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-          <div className="space-y-6">
-            <div className="inline-flex rounded-full border border-[var(--border)] bg-white p-1 shadow-sm" role="group" aria-label="Tipo de cálculo">
-              <button type="button" aria-pressed={mode === "ruta"} onClick={() => setMode("ruta")} className={`rounded-full px-5 py-2 text-sm font-medium transition motion-reduce:transition-none ${mode === "ruta" ? "bg-[var(--wine)] text-white shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>
-                Ruta
-              </button>
-              <button type="button" aria-pressed={mode === "kilometros"} onClick={() => setMode("kilometros")} className={`rounded-full px-5 py-2 text-sm font-medium transition motion-reduce:transition-none ${mode === "kilometros" ? "bg-[var(--wine)] text-white shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>
-                Kilómetros
-              </button>
+        <section className="mt-10" aria-labelledby="mode-title">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 id="mode-title" className="text-sm font-semibold text-[var(--foreground)]">¿Cómo quieres calcular tu viaje?</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted)]">{modeDescription}</p>
             </div>
-
-            <div className="rounded-[2rem] border border-[var(--border)] bg-white p-1 shadow-sm">
-              <TripMap routeCoordinates={routeCoordinates} />
+            <div className="inline-flex w-full rounded-2xl border border-[var(--border)] bg-white p-1 shadow-sm sm:w-auto" role="tablist" aria-label="Modo de cálculo">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "ruta"}
+                onClick={() => changeMode("ruta")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition motion-reduce:transition-none sm:flex-none ${mode === "ruta" ? "bg-[var(--wine)] text-white shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+              >
+                🗺️ Por ruta
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "kilometros"}
+                onClick={() => changeMode("kilometros")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition motion-reduce:transition-none sm:flex-none ${mode === "kilometros" ? "bg-[var(--wine)] text-white shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+              >
+                🔢 Por kilómetros
+              </button>
             </div>
           </div>
+        </section>
 
-          <section className="rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7" aria-labelledby="trip-form-title">
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+          {mode === "ruta" && (
+            <div className="space-y-6">
+              <div className="rounded-[2rem] border border-[var(--border)] bg-white p-1 shadow-sm">
+                <TripMap routeCoordinates={routeCoordinates} />
+              </div>
+            </div>
+          )}
+
+          <section className={mode === "ruta" ? "rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7" : "mx-auto w-full max-w-2xl rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7"} aria-labelledby="trip-form-title">
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">Configura tu viaje</p>
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">{mode === "ruta" ? "Configura tu ruta" : "Calcula con una distancia conocida"}</p>
               <h2 id="trip-form-title" className="mt-2 text-2xl font-semibold tracking-tight">Datos del recorrido</h2>
             </div>
 
-            <form className="mt-7 space-y-5" onSubmit={handleCalculateRoute}>
-              <div>
-                <label htmlFor="origin" className="text-sm font-medium">¿De dónde sales?</label>
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                  <input id="origin" name="origin" type="text" value={origin} onChange={(event) => { setOrigin(event.target.value); setOriginCoordinate(null); }} placeholder="Ciudad o ubicación" autoComplete="street-address" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
-                  <button type="button" onClick={() => openPicker("origin")} className="shrink-0 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--wine)]/30 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] motion-reduce:transition-none">
-                    📍 Elegir en mapa
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="destination" className="text-sm font-medium">¿A dónde vas?</label>
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                  <input id="destination" name="destination" type="text" value={destination} onChange={(event) => { setDestination(event.target.value); setDestinationCoordinate(null); }} placeholder="Ciudad o ubicación" autoComplete="street-address" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
-                  <button type="button" onClick={() => openPicker("destination")} className="shrink-0 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--wine)]/30 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] motion-reduce:transition-none">
-                    📍 Elegir en mapa
-                  </button>
-                </div>
-              </div>
-
-              {pickerTarget && (
-                <div className="rounded-[1.75rem] border border-[var(--wine)]/15 bg-[var(--background)] p-3" aria-live="polite">
-                  <div className="mb-3 flex items-start justify-between gap-3 px-2 pt-1">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {pickerTarget === "origin" ? "Selecciona el punto de partida en el mapa" : "Selecciona el destino en el mapa"}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--muted)]">Puedes tocar o hacer clic en cualquier punto y cambiarlo antes de confirmar.</p>
+            <form className="mt-7 space-y-5" onSubmit={handleCalculate}>
+              {mode === "ruta" ? (
+                <>
+                  <div>
+                    <label htmlFor="origin" className="text-sm font-medium">¿De dónde sales?</label>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input id="origin" name="origin" type="text" value={origin} onChange={(event) => { setOrigin(event.target.value); setOriginCoordinate(null); }} placeholder="Ciudad o ubicación" autoComplete="street-address" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
+                      <button type="button" onClick={() => openPicker("origin")} className="shrink-0 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--wine)]/30 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] motion-reduce:transition-none">
+                        📍 Elegir en mapa
+                      </button>
                     </div>
-                    <button type="button" onClick={() => setPickerTarget(null)} className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--muted)] hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)]">
-                      Cerrar
-                    </button>
                   </div>
-                  <LocationPickerMap
-                    initialCoordinate={pickerTarget === "origin" ? originCoordinate : destinationCoordinate}
-                    onConfirm={handleMapConfirm}
-                  />
+
+                  <div>
+                    <label htmlFor="destination" className="text-sm font-medium">¿A dónde vas?</label>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input id="destination" name="destination" type="text" value={destination} onChange={(event) => { setDestination(event.target.value); setDestinationCoordinate(null); }} placeholder="Ciudad o ubicación" autoComplete="street-address" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
+                      <button type="button" onClick={() => openPicker("destination")} className="shrink-0 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--wine)]/30 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] motion-reduce:transition-none">
+                        📍 Elegir en mapa
+                      </button>
+                    </div>
+                  </div>
+
+                  {pickerTarget && (
+                    <div className="rounded-[1.75rem] border border-[var(--wine)]/15 bg-[var(--background)] p-3" aria-live="polite">
+                      <div className="mb-3 flex items-start justify-between gap-3 px-2 pt-1">
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            {pickerTarget === "origin" ? "Selecciona el punto de partida en el mapa" : "Selecciona el destino en el mapa"}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">Puedes tocar o hacer clic en cualquier punto y cambiarlo antes de confirmar.</p>
+                        </div>
+                        <button type="button" onClick={() => setPickerTarget(null)} className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--muted)] hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)]">
+                          Cerrar
+                        </button>
+                      </div>
+                      <LocationPickerMap
+                        initialCoordinate={pickerTarget === "origin" ? originCoordinate : destinationCoordinate}
+                        onConfirm={handleMapConfirm}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div>
+                  <label htmlFor="kilometers" className="text-sm font-medium">Kilómetros</label>
+                  <div className="relative mt-2">
+                    <input id="kilometers" name="kilometers" type="number" min="0.01" step="0.01" value={kilometers} onChange={(event) => setKilometers(event.target.value)} placeholder="Ej. 250" inputMode="decimal" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 pr-16 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
+                    <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-[var(--muted)]">km</span>
+                  </div>
                 </div>
               )}
 
@@ -365,7 +463,7 @@ export default function TripCalculatorPage() {
               {error && <p role="alert" className="rounded-2xl border border-[var(--border)] bg-[var(--cream)] px-4 py-3 text-sm text-[var(--wine)]">{error}</p>}
 
               <button type="submit" disabled={isLoading} className="w-full rounded-2xl bg-[var(--wine)] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--wine-dark)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none motion-reduce:transition-none">
-                {isLoading ? "Calculando ruta…" : "Calcular viaje"}
+                {isLoading ? "Calculando…" : mode === "ruta" ? "Calcular viaje" : "Calcular combustible"}
               </button>
             </form>
           </section>
@@ -374,24 +472,31 @@ export default function TripCalculatorPage() {
         <section className="mt-6 rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7" aria-labelledby="results-title">
           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">Resultado</p>
-              <h2 id="results-title" className="mt-2 text-xl font-semibold tracking-tight">Resumen del viaje</h2>
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">Resultado · {mode === "ruta" ? "Por ruta" : "Por kilómetros"}</p>
+              <h2 id="results-title" className="mt-2 text-xl font-semibold tracking-tight">Resumen del cálculo</h2>
             </div>
             <span className="text-xs text-[var(--muted)]">{isLoading ? "Calculando…" : "Datos del recorrido"}</span>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Distancia", distanceKm === null ? "—" : `${distanceKm.toFixed(2)} km`],
-              ["Combustible estimado", fuelGallons === null ? "—" : `${fuelGallons.toFixed(2)} gal`],
-              ["Costo estimado", fuelCost === null ? "No disponible" : `$${fuelCost.toFixed(2)}`],
-              ["Duración", durationMinutes === null ? "—" : `${durationMinutes.toFixed(0)} min`],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-                <p className="text-xs text-[var(--muted)]">{label}</p>
-                <p className="mt-2 text-xl font-semibold tracking-tight">{value}</p>
+          <div className={`mt-6 grid gap-3 ${mode === "ruta" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+              <p className="text-xs text-[var(--muted)]">Distancia</p>
+              <p className="mt-2 text-xl font-semibold tracking-tight">{distanceKm === null ? "—" : `${distanceKm.toFixed(2)} km`}</p>
+            </div>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+              <p className="text-xs text-[var(--muted)]">Combustible</p>
+              <p className="mt-2 text-xl font-semibold tracking-tight">{fuelGallons === null ? "—" : `${fuelGallons.toFixed(2)} gal`}</p>
+            </div>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+              <p className="text-xs text-[var(--muted)]">Costo</p>
+              <p className="mt-2 text-xl font-semibold tracking-tight">{fuelCost === null ? "No disponible" : `$${fuelCost.toFixed(2)}`}</p>
+            </div>
+            {mode === "ruta" && (
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+                <p className="text-xs text-[var(--muted)]">Duración</p>
+                <p className="mt-2 text-xl font-semibold tracking-tight">{formatDuration(durationMinutes)}</p>
               </div>
-            ))}
+            )}
           </div>
         </section>
 
