@@ -12,6 +12,7 @@ const LocationPickerMap = dynamic(() => import("@/components/LocationPickerMap")
 });
 
 type Coordinate = [number, number];
+type TripType = "oneWay" | "roundTrip";
 
 type GeocodeResult = {
   displayName: string;
@@ -40,6 +41,7 @@ const fuelOptions = [
 
 export default function TripCalculatorPage() {
   const [mode, setMode] = useState<"ruta" | "kilometros">("ruta");
+  const [tripType, setTripType] = useState<TripType>("oneWay");
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [originCoordinate, setOriginCoordinate] = useState<Coordinate | null>(null);
@@ -106,6 +108,7 @@ export default function TripCalculatorPage() {
   const selectedFuel = fuelPrices.find((fuel) => fuel.type === fuelType) ?? null;
   const selectedPrice = selectedFuel?.pricePerGallon ?? null;
   const hasValidPrice = selectedPrice !== null && Number.isFinite(selectedPrice) && selectedPrice > 0;
+  const tripMultiplier = tripType === "roundTrip" ? 2 : 1;
   const fuelSourceLabel =
     fuelSourceStatus === "official"
       ? "Fuente oficial"
@@ -126,6 +129,12 @@ export default function TripCalculatorPage() {
     if (nextMode === mode) return;
     setMode(nextMode);
     setPickerTarget(null);
+    clearResults();
+  }
+
+  function changeTripType(nextTripType: TripType) {
+    if (nextTripType === tripType) return;
+    setTripType(nextTripType);
     clearResults();
   }
 
@@ -214,17 +223,18 @@ export default function TripCalculatorPage() {
         return;
       }
 
+      const totalDistanceKm = parsedKilometers * tripMultiplier;
       setIsLoading(true);
       clearResults();
 
       try {
-        const { gallons } = calculateFuelNeeded(parsedKilometers, parsedConsumption);
+        const { gallons } = calculateFuelNeeded(totalDistanceKm, parsedConsumption);
         const cost =
           hasValidPrice && selectedPrice !== null
-            ? calculateTripFuel(parsedKilometers, parsedConsumption, selectedPrice).cost
+            ? calculateTripFuel(totalDistanceKm, parsedConsumption, selectedPrice).cost
             : null;
 
-        setDistanceKm(parsedKilometers);
+        setDistanceKm(totalDistanceKm);
         setFuelGallons(gallons);
         setFuelCost(cost);
       } catch (calculationError) {
@@ -279,14 +289,15 @@ export default function TripCalculatorPage() {
         throw new Error("No pudimos calcular una ruta entre esas ubicaciones.");
       }
 
-      const { gallons } = calculateFuelNeeded(data.distanceKm, parsedConsumption);
+      const totalDistanceKm = data.distanceKm * tripMultiplier;
+      const { gallons } = calculateFuelNeeded(totalDistanceKm, parsedConsumption);
       const cost =
         hasValidPrice && selectedPrice !== null
-          ? calculateTripFuel(data.distanceKm, parsedConsumption, selectedPrice).cost
+          ? calculateTripFuel(totalDistanceKm, parsedConsumption, selectedPrice).cost
           : null;
 
-      setDistanceKm(data.distanceKm);
-      setDurationMinutes(data.durationMinutes);
+      setDistanceKm(totalDistanceKm);
+      setDurationMinutes(data.durationMinutes * tripMultiplier);
       setFuelGallons(gallons);
       setFuelCost(cost);
       setRouteCoordinates(data.geometry.coordinates);
@@ -364,6 +375,35 @@ export default function TripCalculatorPage() {
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition motion-reduce:transition-none sm:flex-none ${mode === "kilometros" ? "bg-[var(--wine)] text-white shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
               >
                 🔢 Por kilómetros
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-sm sm:p-6" aria-labelledby="trip-type-title">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 id="trip-type-title" className="text-sm font-semibold text-[var(--foreground)]">Tipo de viaje</h2>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                {tripType === "roundTrip" ? "Origen → Destino → Origen" : "Origen → Destino"}
+              </p>
+            </div>
+            <div className="grid w-full grid-cols-2 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-1 sm:w-auto" role="group" aria-label="Tipo de viaje">
+              <button
+                type="button"
+                aria-pressed={tripType === "oneWay"}
+                onClick={() => changeTripType("oneWay")}
+                className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition motion-reduce:transition-none ${tripType === "oneWay" ? "bg-[var(--wine)] text-white shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+              >
+                🛣️ Solo ida
+              </button>
+              <button
+                type="button"
+                aria-pressed={tripType === "roundTrip"}
+                onClick={() => changeTripType("roundTrip")}
+                className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition motion-reduce:transition-none ${tripType === "roundTrip" ? "bg-[var(--wine)] text-white shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+              >
+                🔄 Ida y vuelta
               </button>
             </div>
           </div>
@@ -475,28 +515,38 @@ export default function TripCalculatorPage() {
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">Resultado · {mode === "ruta" ? "Por ruta" : "Por kilómetros"}</p>
               <h2 id="results-title" className="mt-2 text-xl font-semibold tracking-tight">Resumen del cálculo</h2>
             </div>
-            <span className="text-xs text-[var(--muted)]">{isLoading ? "Calculando…" : "Datos del recorrido"}</span>
+            <span className="text-xs text-[var(--muted)]">{isLoading ? "Calculando…" : tripType === "roundTrip" ? "Origen → Destino → Origen" : "Origen → Destino"}</span>
           </div>
 
-          <div className={`mt-6 grid gap-3 ${mode === "ruta" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
+          <div className={`mt-6 grid gap-3 ${mode === "ruta" ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-              <p className="text-xs text-[var(--muted)]">Distancia</p>
-              <p className="mt-2 text-xl font-semibold tracking-tight">{distanceKm === null ? "—" : `${distanceKm.toFixed(2)} km`}</p>
+              <p className="text-xs text-[var(--muted)]">Distancia de ida</p>
+              <p className="mt-2 text-xl font-semibold tracking-tight">{distanceKm === null ? "—" : `${(distanceKm / tripMultiplier).toFixed(2)} km`}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-              <p className="text-xs text-[var(--muted)]">Combustible</p>
+              <p className="text-xs text-[var(--muted)]">Distancia total</p>
+              <p className="mt-2 text-xl font-semibold tracking-tight">{distanceKm === null ? "—" : `${distanceKm.toFixed(2)} km`}</p>
+            </div>
+            {mode === "ruta" && (
+              <>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+                  <p className="text-xs text-[var(--muted)]">Duración de ida</p>
+                  <p className="mt-2 text-xl font-semibold tracking-tight">{durationMinutes === null ? "—" : formatDuration(durationMinutes / tripMultiplier)}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+                  <p className="text-xs text-[var(--muted)]">Duración total</p>
+                  <p className="mt-2 text-xl font-semibold tracking-tight">{formatDuration(durationMinutes)}</p>
+                </div>
+              </>
+            )}
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+              <p className="text-xs text-[var(--muted)]">Combustible total</p>
               <p className="mt-2 text-xl font-semibold tracking-tight">{fuelGallons === null ? "—" : `${fuelGallons.toFixed(2)} gal`}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-              <p className="text-xs text-[var(--muted)]">Costo</p>
+              <p className="text-xs text-[var(--muted)]">Costo total</p>
               <p className="mt-2 text-xl font-semibold tracking-tight">{fuelCost === null ? "No disponible" : `$${fuelCost.toFixed(2)}`}</p>
             </div>
-            {mode === "ruta" && (
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-                <p className="text-xs text-[var(--muted)]">Duración</p>
-                <p className="mt-2 text-xl font-semibold tracking-tight">{formatDuration(durationMinutes)}</p>
-              </div>
-            )}
           </div>
         </section>
 
