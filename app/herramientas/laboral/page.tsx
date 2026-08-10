@@ -15,7 +15,6 @@ import {
 } from "@/lib/laboral";
 
 const money = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
-const number = new Intl.NumberFormat("es-EC", { maximumFractionDigits: 2 });
 
 function Field({ label, value, onChange, min = 0, max, step = "0.01", placeholder, help }: { label: string; value: string; onChange: (value: string) => void; min?: number; max?: number; step?: string; placeholder?: string; help?: string }) {
   return (
@@ -42,11 +41,9 @@ export default function LaboralPage() {
   const [hours50, setHours50] = useState("0");
   const [hours100, setHours100] = useState("0");
   const [profit, setProfit] = useState("");
-  const [utilitiesTimeMode, setUtilitiesTimeMode] = useState<"months" | "days">("months");
-  const [utilityMonths, setUtilityMonths] = useState("12");
-  const [utilityDays, setUtilityDays] = useState("360");
+  const [hrWorkerDays, setHrWorkerDays] = useState("360");
+  const [hrFamilyCount, setHrFamilyCount] = useState("0");
   const [totalWorkerDays, setTotalWorkerDays] = useState("");
-  const [familyCount, setFamilyCount] = useState("0");
   const [totalFamilyFactor, setTotalFamilyFactor] = useState("");
   const [workerUtilityBase, setWorkerUtilityBase] = useState("");
   const [workerUtilityCharges, setWorkerUtilityCharges] = useState("");
@@ -67,15 +64,25 @@ export default function LaboralPage() {
     const reserveCount = Math.min(12, Math.max(0, Number(reserveMonths) || 0));
     const reserveAverage = reserveCount > 0 ? monthlyValues.slice(0, reserveCount).reduce((sum, value) => sum + value, 0) / reserveCount : 0;
     const reserveBase = reserveMode === "monthly" ? reserveAverage : salary;
-    const selectedMonths = Math.min(12, Math.max(0, Number(utilityMonths) || 0));
-    const exactDays = Math.min(360, Math.max(0, Number(utilityDays) || 0));
-    const workerDays = utilitiesTimeMode === "months" ? selectedMonths * 30 : exactDays;
-    const familyFactor = workerDays * Math.max(0, Number(familyCount) || 0);
+    const workerDays = Math.min(360, Math.max(0, Number(hrWorkerDays) || 0));
+    const familyFactor = workerDays * Math.max(0, Number(hrFamilyCount) || 0);
     const totalDays = Math.max(0, Number(totalWorkerDays) || 0);
     const factorB = Math.max(0, Number(totalFamilyFactor) || 0);
     const utilities = calculateUtilities({ companyProfit: Number(profit) || 0, workerDays, totalWorkerDays: totalDays, familyFactor, totalFamilyFactor: factorB });
-    return { thirteenth: calculateThirteenth([annualRemuneration]), fourteenth: calculateFourteenth(region, monthCount14), vacation: calculateVacation(annualRemuneration), reserve: calculateReserveFund(reserveBase, reserveCount), overtime: (Number(hours50) || 0) * hourly.supplementary + (Number(hours100) || 0) * hourly.extraordinary, hourly, utilities, workerDays, familyFactor, reserveBase, annualRemuneration, totalDays, factorB };
-  }, [monthlySalary, region, months14, reserveMonths, reserveMode, hours50, hours100, profit, utilitiesTimeMode, utilityMonths, utilityDays, totalWorkerDays, familyCount, totalFamilyFactor, thirteenthMode, monthlyRemunerations]);
+    return {
+      thirteenth: calculateThirteenth([annualRemuneration]),
+      fourteenth: calculateFourteenth(region, monthCount14),
+      vacation: calculateVacation(annualRemuneration),
+      reserve: calculateReserveFund(reserveBase, reserveCount),
+      overtime: (Number(hours50) || 0) * hourly.supplementary + (Number(hours100) || 0) * hourly.extraordinary,
+      hourly,
+      utilities,
+      reserveBase,
+      annualRemuneration,
+      totalDays,
+      factorB,
+    };
+  }, [monthlySalary, region, months14, reserveMonths, reserveMode, hours50, hours100, profit, hrWorkerDays, hrFamilyCount, totalWorkerDays, totalFamilyFactor, thirteenthMode, monthlyRemunerations]);
 
   const workerBase = Math.max(0, Number(workerUtilityBase) || 0);
   const workerCharges = Math.max(0, Number(workerUtilityCharges) || 0);
@@ -137,31 +144,21 @@ export default function LaboralPage() {
 
             <section className="rounded-2xl border border-[var(--border)] bg-white p-5 lg:col-span-2">
               <h2 className="text-xl font-semibold">💰 Utilidades</h2>
-              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Tu sueldo por sí solo no permite saber cuánto te corresponde. Si tu empresa ya te entregó o anunció el reparto, aquí puedes usar esos valores directamente.</p>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Aquí tienes dos caminos: si tu empresa ya te dio los valores, solo los sumas; si eres RR. HH., puedes abrir el cálculo completo del reparto.</p>
 
-              <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
-                <p className="text-sm font-semibold">👷 Para ti como trabajador</p>
-                <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Si la empresa te dice, por ejemplo, <strong>Base $700</strong> y <strong>Cargas $500</strong>, escribe esos dos valores. CalculaEC te mostrará cuánto recibes en total.</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Base (10%) — tu valor" value={workerUtilityBase} onChange={setWorkerUtilityBase} min={0} step="0.01" placeholder="Ejemplo: 700" help="La parte que te corresponde por el tiempo trabajado." />
-                  <Field label="Cargas (5%) — tu valor" value={workerUtilityCharges} onChange={setWorkerUtilityCharges} min={0} step="0.01" placeholder="Ejemplo: 500" help="La parte que te corresponde por tus cargas familiares." />
+              <div className="mt-5 rounded-2xl border border-[var(--wine)]/20 bg-[var(--wine)]/5 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">👷</div>
+                  <div><h3 className="text-base font-semibold">Si eres trabajador</h3><p className="mt-1 text-sm leading-6 text-[var(--muted)]">Si tu empresa te informó, por ejemplo, <strong>Base (10%) $700</strong> y <strong>Cargas (5%) $500</strong>, coloca esos valores. No necesitas saber cuántos trabajadores tiene la empresa ni ningún dato de RR. HH.</p></div>
                 </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <Result label="Base (10%)" value={workerUtilityHasInput ? money.format(workerBase) : "—"} />
-                  <Result label="Cargas (5%)" value={workerUtilityHasInput ? money.format(workerCharges) : "—"} />
-                  <Result label="Total de utilidades" value={workerUtilityHasInput ? money.format(workerUtilityTotal) : "Ingresa tus valores"} />
-                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Base (10%) — tu valor ($)" value={workerUtilityBase} onChange={setWorkerUtilityBase} min={0} step="0.01" placeholder="700" help="El valor que te informó la empresa." /><Field label="Cargas (5%) — tu valor ($)" value={workerUtilityCharges} onChange={setWorkerUtilityCharges} min={0} step="0.01" placeholder="500" help="Si tienes cargas familiares y la empresa te informó ese valor." /></div>
+                <div className="mt-5 rounded-xl bg-white p-4"><p className="text-xs text-[var(--muted)]">Total de utilidades que recibirías</p><p className="mt-1 text-3xl font-semibold tracking-tight">{workerUtilityHasInput ? money.format(workerUtilityTotal) : "—"}</p>{!workerUtilityHasInput && <p className="mt-2 text-xs leading-5 text-[var(--muted)]">Ejemplo: $700 de Base + $500 de Cargas = $1.200.</p>}</div>
               </div>
 
-              <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
-                <p className="text-sm font-semibold">📅 Si no tienes el desglose</p>
-                <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Puedes indicar cuánto tiempo trabajaste y cuántas cargas tienes para tener tus datos listos, pero no inventaremos un valor en dólares: para calcularlo necesitas el reparto real de la empresa.</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2"><div><p className="text-xs text-[var(--muted)]">Tiempo trabajado</p><p className="mt-1 text-lg font-semibold">{number.format(values.workerDays)} días</p></div><div><p className="text-xs text-[var(--muted)]">Cargas familiares</p><p className="mt-1 text-lg font-semibold">{number.format(Number(familyCount) || 0)}</p></div></div>
-                <div className="mt-5 rounded-xl border border-[var(--border)] p-4"><p className="text-sm font-semibold">Tu tiempo trabajado</p><p className="mt-1 text-xs text-[var(--muted)]">Si no recuerdas los días exactos, usa meses. Para esta referencia, 1 mes = 30 días.</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setUtilitiesTimeMode("months")} className={`min-h-14 rounded-xl border px-4 text-left ${utilitiesTimeMode === "months" ? "border-[var(--wine)] bg-[var(--wine)]/5" : "border-[var(--border)]"}`}><span className="block text-sm font-semibold">📅 Por meses</span><span className="mt-1 block text-xs text-[var(--muted)]">Elige de 1 a 12</span></button><button type="button" onClick={() => setUtilitiesTimeMode("days")} className={`min-h-14 rounded-xl border px-4 text-left ${utilitiesTimeMode === "days" ? "border-[var(--wine)] bg-[var(--wine)]/5" : "border-[var(--border)]"}`}><span className="block text-sm font-semibold">📆 Por días</span><span className="mt-1 block text-xs text-[var(--muted)]">Para el dato exacto</span></button></div>{utilitiesTimeMode === "months" ? <div className="mt-4"><p className="text-sm font-medium">Meses trabajados</p><div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <button key={month} type="button" onClick={() => setUtilityMonths(String(month))} className={`min-h-10 rounded-lg border text-sm ${Number(utilityMonths) === month ? "border-[var(--wine)] bg-[var(--wine)]/5 font-semibold text-[var(--wine)]" : "border-[var(--border)]"}`}>{month} {month === 1 ? "mes" : "meses"}</button>)}</div><div className="mt-3"><Field label="O ingresa meses trabajados" value={utilityMonths} onChange={setUtilityMonths} min={0} max={12} step="0.1" /></div></div> : <div className="mt-4"><Field label="Días trabajados" value={utilityDays} onChange={setUtilityDays} min={0} max={360} step="1" placeholder="Ejemplo: 180" /></div>}</div>
-                <div className="mt-4"><Field label="Cargas familiares" value={familyCount} onChange={setFamilyCount} min={0} max={20} step="1" placeholder="Ejemplo: 1" help="Solo para que tengas registrado tu dato. No reemplaza el reparto oficial de la empresa." /></div>
+              <div className="mt-5 rounded-xl border border-[var(--border)] p-4">
+                <button type="button" onClick={() => setShowUtilityAdvanced((current) => !current)} className="w-full text-left"><span className="text-sm font-semibold">{showUtilityAdvanced ? "▾ Ocultar cálculo para RR. HH." : "▸ 🧑‍💼 Soy RR. HH. / Tengo los datos de reparto de la empresa"}</span><span className="mt-1 block text-xs text-[var(--muted)]">Solo abre esta sección si tienes la información interna necesaria para calcular el reparto.</span></button>
+                {showUtilityAdvanced && <div className="mt-5"><div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-6 text-[var(--muted)]"><strong className="text-[var(--foreground)]">Cálculo empresarial:</strong> el 10% se reparte por días trabajados y el 5% por cargas familiares. Estos datos son propios del reparto de la empresa y normalmente los maneja RR. HH. o la nómina.</div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Utilidad líquida de la empresa ($)" value={profit} onChange={setProfit} help="Utilidad líquida sobre la que se calcula el 15%." /><Field label="Tus días trabajados" value={hrWorkerDays} onChange={setHrWorkerDays} min={0} max={360} step="1" help="Tus días trabajados durante el ejercicio." /><Field label="Tus cargas familiares" value={hrFamilyCount} onChange={setHrFamilyCount} min={0} max={20} step="1" help="Cargas familiares acreditadas ante la empresa." /><Field label="Total de días de todas las personas" value={totalWorkerDays} onChange={setTotalWorkerDays} min={0} step="1" help="Dato interno de la empresa." /><Field label="Factor B total" value={totalFamilyFactor} onChange={setTotalFamilyFactor} min={0} step="1" help="Suma del Factor A de todas las personas." /></div><div className="mt-4 grid gap-3 sm:grid-cols-3"><Result label="Base (10%)" value={utilityReady ? money.format(values.utilities.tenPercent) : "No disponible"} /><Result label="Cargas (5%)" value={utilityReady ? money.format(values.utilities.fivePercent) : "No disponible"} /><Result label="Total de utilidades" value={utilityReady ? money.format(values.utilities.total) : "Completa los datos"} /></div></div>}
               </div>
-
-              <div className="mt-5 rounded-xl border border-[var(--border)] p-4"><button type="button" onClick={() => setShowUtilityAdvanced((current) => !current)} className="w-full text-left"><span className="text-sm font-semibold">{showUtilityAdvanced ? "▾ Ocultar modo avanzado" : "▸ 🧑‍💼 Tengo los datos de reparto de mi empresa (RR. HH.)"}</span><span className="mt-1 block text-xs text-[var(--muted)]">Para RR. HH. o si necesitas calcular el reparto completo de la empresa.</span></button>{showUtilityAdvanced && <div className="mt-5"><div className="rounded-xl border border-[var(--wine)]/15 bg-[var(--wine)]/5 p-4 text-sm leading-6 text-[var(--muted)]"><strong className="text-[var(--foreground)]">Modo RR. HH.:</strong> aquí sí puedes introducir los datos internos de la empresa para obtener el valor del reparto. Si eres trabajador y ya tienes Base y Cargas en dólares, no necesitas abrir esta sección.</div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Utilidad líquida de la empresa ($)" value={profit} onChange={setProfit} help="Dato interno que debe entregar la empresa." /><Field label="Total de días de todas las personas" value={totalWorkerDays} onChange={setTotalWorkerDays} min={0} step="1" help="Dato interno de RR. HH.; no necesitas conocerlo como trabajador." /><Field label="Número de cargas familiares" value={familyCount} onChange={setFamilyCount} min={0} max={20} step="1" help="Tus cargas familiares." /><Field label="Factor B total" value={totalFamilyFactor} onChange={setTotalFamilyFactor} min={0} step="1" help="Dato interno que debe entregar la empresa." /></div><div className="mt-4 grid gap-3 sm:grid-cols-3"><Result label="Base (10%)" value={utilityReady ? money.format(values.utilities.tenPercent) : "No disponible"} /><Result label="Cargas (5%)" value={utilityReady ? money.format(values.utilities.fivePercent) : "No disponible"} /><Result label="Total de utilidades" value={utilityReady ? money.format(values.utilities.total) : "Completa los datos"} /></div></div>}</div>
             </section>
           </div>
 
