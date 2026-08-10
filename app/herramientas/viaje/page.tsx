@@ -229,10 +229,6 @@ export default function TripCalculatorPage() {
 
   const formatNumber = (value: number, maximumFractionDigits = 2) => new Intl.NumberFormat("es-EC", { minimumFractionDigits: 0, maximumFractionDigits }).format(value);
   const formatFixed = (value: number, digits = 2) => new Intl.NumberFormat("es-EC", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
-  const breakdownDistance = distanceKm;
-  const breakdownOneWayDistance = distanceKm === null ? null : distanceKm / tripMultiplier;
-  const breakdownGallons = fuelGallons;
-  const breakdownCost = fuelCost;
 
   const modeDescription = mode === "ruta"
     ? "Selecciona un origen y un destino para calcular la distancia real, tiempo, combustible y costo del viaje."
@@ -309,35 +305,42 @@ export default function TripCalculatorPage() {
           </div>
         </section>
 
-        {distanceKm !== null && fuelGallons !== null && (
-          <section className="mt-6 rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7" aria-labelledby="breakdown-title">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">Transparencia del cálculo</p>
-              <h2 id="breakdown-title" className="mt-2 text-xl font-semibold tracking-tight">Desglose del cálculo</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Estos valores muestran cómo se obtiene el combustible y el costo a partir de los datos utilizados en el cálculo.</p>
-            </div>
+        {distanceKm !== null && fuelGallons !== null && (() => {
+          const breakdownDistance = distanceKm;
+          const breakdownOneWayDistance = distanceKm / tripMultiplier;
+          const breakdownGallons = fuelGallons;
+          const breakdownCost = fuelCost;
 
-            <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-              {tripType === "roundTrip" ? <>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Distancia de ida</dt><dd className="mt-2 text-lg font-semibold">{formatFixed(breakdownOneWayDistance!)} km</dd></div>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Distancia total</dt><dd className="mt-2 text-lg font-semibold">{formatFixed(breakdownDistance!)} km</dd></div>
-              </> : <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Distancia</dt><dd className="mt-2 text-lg font-semibold">{formatFixed(breakdownDistance!)} km</dd></div>}
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Rendimiento</dt><dd className="mt-2 text-lg font-semibold">{formatNumber(Number(consumption))} km/gal</dd></div>
-            </dl>
+          return (
+            <section className="mt-6 rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7" aria-labelledby="breakdown-title">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">Transparencia del cálculo</p>
+                <h2 id="breakdown-title" className="mt-2 text-xl font-semibold tracking-tight">Desglose del cálculo</h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Estos valores muestran cómo se obtiene el combustible y el costo a partir de los datos utilizados en el cálculo.</p>
+              </div>
 
-            <div className="mt-3 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-              <p className="text-xs text-[var(--muted)]">{tripType === "roundTrip" ? "Combustible total" : "Combustible necesario"}</p>
-              <p className="mt-2 text-base font-medium leading-7 sm:text-lg" aria-label={`${formatFixed(breakdownDistance!)} kilómetros dividido entre ${formatNumber(Number(consumption))} kilómetros por galón es igual a ${formatFixed(breakdownGallons)} galones`}>
-                {formatFixed(breakdownDistance!)} ÷ {formatNumber(Number(consumption))} = <strong>{formatFixed(breakdownGallons)} gal</strong>
-              </p>
-            </div>
+              <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+                {tripType === "roundTrip" ? <>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Distancia de ida</dt><dd className="mt-2 text-lg font-semibold">{formatFixed(breakdownOneWayDistance)} km</dd></div>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Distancia total</dt><dd className="mt-2 text-lg font-semibold">{formatFixed(breakdownDistance)} km</dd></div>
+                </> : <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Distancia</dt><dd className="mt-2 text-lg font-semibold">{formatFixed(breakdownDistance)} km</dd></div>}
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Rendimiento</dt><dd className="mt-2 text-lg font-semibold">{formatNumber(Number(consumption))} km/gal</dd></div>
+              </dl>
 
-            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Precio del combustible</dt><dd className="mt-2 text-lg font-semibold">{hasValidPrice && selectedPrice !== null ? `$${formatFixed(selectedPrice)} / gal` : "No disponible"}</dd></div>
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">{tripType === "roundTrip" ? "Costo total" : "Costo estimado"}</dt><dd className="mt-2 text-base font-semibold leading-7 sm:text-lg" aria-label={hasValidPrice && selectedPrice !== null && breakdownCost !== null ? `${formatFixed(breakdownGallons)} galones por ${formatFixed(selectedPrice)} dólares por galón es igual a ${formatFixed(breakdownCost)} dólares` : "Costo no disponible"}>{hasValidPrice && selectedPrice !== null && breakdownCost !== null ? <>{formatFixed(breakdownGallons)} × ${formatFixed(selectedPrice)} = <strong>${formatFixed(breakdownCost)}</strong></> : "No disponible"}</dd></div>
-            </dl>
-          </section>
-        )}
+              <div className="mt-3 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+                <p className="text-xs text-[var(--muted)]">{tripType === "roundTrip" ? "Combustible total" : "Combustible necesario"}</p>
+                <p className="mt-2 text-base font-medium leading-7 sm:text-lg" aria-label={`${formatFixed(breakdownDistance)} kilómetros dividido entre ${formatNumber(Number(consumption))} kilómetros por galón es igual a ${formatFixed(breakdownGallons)} galones`}>
+                  {formatFixed(breakdownDistance)} ÷ {formatNumber(Number(consumption))} = <strong>{formatFixed(breakdownGallons)} gal</strong>
+                </p>
+              </div>
+
+              <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">Precio del combustible</dt><dd className="mt-2 text-lg font-semibold">{hasValidPrice && selectedPrice !== null ? `$${formatFixed(selectedPrice)} / gal` : "No disponible"}</dd></div>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4"><dt className="text-xs text-[var(--muted)]">{tripType === "roundTrip" ? "Costo total" : "Costo estimado"}</dt><dd className="mt-2 text-base font-semibold leading-7 sm:text-lg" aria-label={hasValidPrice && selectedPrice !== null && breakdownCost !== null ? `${formatFixed(breakdownGallons)} galones por ${formatFixed(selectedPrice)} dólares por galón es igual a ${formatFixed(breakdownCost)} dólares` : "Costo no disponible"}>{hasValidPrice && selectedPrice !== null && breakdownCost !== null ? <>{formatFixed(breakdownGallons)} × ${formatFixed(selectedPrice)} = <strong>${formatFixed(breakdownCost)}</strong></> : "No disponible"}</dd></div>
+              </dl>
+            </section>
+          );
+        })()}
 
         <p className="mt-6 text-center text-xs leading-5 text-[var(--muted)]">Los precios de combustible se actualizarán automáticamente cuando conectemos la fuente de datos.</p>
       </div>
