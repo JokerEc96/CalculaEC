@@ -1,27 +1,34 @@
 "use client";
 
 import type { LatLngExpression } from "leaflet";
-import { MapContainer, TileLayer } from "react-leaflet";
+import { MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
+import { useEffect, useMemo } from "react";
 import "leaflet/dist/leaflet.css";
 
-export interface TripMapPoint {
-  lat: number;
-  lng: number;
-}
-
 export interface TripMapProps {
-  origin?: TripMapPoint;
-  destination?: TripMapPoint;
-  routeCoordinates?: TripMapPoint[];
+  routeCoordinates?: [number, number][];
 }
 
 const ECUADOR_CENTER: LatLngExpression = [-1.8312, -78.1834];
 
-export default function TripMap({
-  origin: _origin,
-  destination: _destination,
-  routeCoordinates: _routeCoordinates,
-}: TripMapProps) {
+function RouteViewport({ coordinates }: { coordinates: LatLngExpression[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (coordinates.length > 0) {
+      map.fitBounds(coordinates, { padding: [32, 32] });
+    }
+  }, [coordinates, map]);
+
+  return null;
+}
+
+export default function TripMap({ routeCoordinates }: TripMapProps) {
+  const routePath = useMemo<LatLngExpression[]>(
+    () => routeCoordinates?.map(([longitude, latitude]) => [latitude, longitude]) ?? [],
+    [routeCoordinates],
+  );
+
   return (
     <div className="h-[360px] w-full overflow-hidden rounded-[2rem] sm:h-[440px]">
       <MapContainer
@@ -34,6 +41,16 @@ export default function TripMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {routePath.length > 0 && (
+          <>
+            <Polyline
+              positions={routePath}
+              pathOptions={{ color: "var(--wine)", weight: 5 }}
+            />
+            <RouteViewport coordinates={routePath} />
+          </>
+        )}
       </MapContainer>
     </div>
   );
