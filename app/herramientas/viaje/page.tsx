@@ -269,6 +269,13 @@ export default function TripCalculatorPage() {
           : geocodeLocation(destinationQuery),
       ]);
 
+      if (
+        originLocation.lat === destinationLocation.lat &&
+        originLocation.lng === destinationLocation.lng
+      ) {
+        throw new Error("El origen y el destino no pueden ser el mismo lugar.");
+      }
+
       const routeParams = new URLSearchParams({
         originLat: String(originLocation.lat),
         originLng: String(originLocation.lng),
@@ -301,6 +308,8 @@ export default function TripCalculatorPage() {
       setFuelGallons(gallons);
       setFuelCost(cost);
       setRouteCoordinates(data.geometry.coordinates);
+      setOriginCoordinate([originLocation.lat, originLocation.lng]);
+      setDestinationCoordinate([destinationLocation.lat, destinationLocation.lng]);
     } catch (routeError) {
       setError(
         routeError instanceof Error
@@ -413,7 +422,11 @@ export default function TripCalculatorPage() {
           {mode === "ruta" && (
             <div className="space-y-6">
               <div className="rounded-[2rem] border border-[var(--border)] bg-white p-1 shadow-sm">
-                <TripMap routeCoordinates={routeCoordinates} />
+                <TripMap
+                  routeCoordinates={routeCoordinates}
+                  originCoordinate={originCoordinate}
+                  destinationCoordinate={destinationCoordinate}
+                />
               </div>
             </div>
           )}
