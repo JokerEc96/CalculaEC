@@ -7,11 +7,11 @@ import InfoSection from "@/components/InfoSection";
 
 export default function Home() {
   return (
-    <main className="min-h-screen w-full overflow-hidden bg-[var(--background)]">
+    <main id="inicio" className="min-h-screen w-full overflow-hidden bg-[var(--background)]">
       <div className="mx-auto w-full max-w-[1240px] px-4 sm:px-6 lg:px-8">
         <Header />
 
-        <section className="relative py-14 sm:py-20 lg:py-24" aria-labelledby="hero-title">
+        <section className="relative scroll-mt-8 py-14 sm:py-20 lg:py-24" aria-labelledby="hero-title">
           <div className="pointer-events-none absolute -right-24 top-0 h-72 w-72 rounded-full bg-[var(--wine)]/5 blur-3xl" aria-hidden="true" />
           <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
             <div className="relative max-w-2xl">
