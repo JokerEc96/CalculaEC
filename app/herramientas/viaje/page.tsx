@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import TripMap from "@/components/TripMap";
 
 const fuelOptions = ["Ecopaís", "Súper", "Diésel"] as const;
 
@@ -70,16 +71,8 @@ export default function TripCalculatorPage() {
               </button>
             </div>
 
-            <div className="flex min-h-[360px] flex-col items-center justify-center rounded-[2rem] border border-[var(--border)] bg-white p-8 text-center shadow-sm sm:min-h-[440px]">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--cream)] text-2xl" aria-hidden="true">
-                🗺️⛽
-              </div>
-              <h2 className="mt-5 text-xl font-semibold tracking-tight">
-                Tu ruta aparecerá aquí
-              </h2>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--muted)]">
-                Este espacio está preparado para integrar el mapa y visualizar tu recorrido.
-              </p>
+            <div className="rounded-[2rem] border border-[var(--border)] bg-white p-1 shadow-sm">
+              <TripMap />
             </div>
           </div>
 
