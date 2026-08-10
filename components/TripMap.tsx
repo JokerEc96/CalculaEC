@@ -1,12 +1,14 @@
 "use client";
 
 import type { LatLngExpression, LatLngTuple } from "leaflet";
-import { MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
 import { useEffect, useMemo } from "react";
 import "leaflet/dist/leaflet.css";
 
 export interface TripMapProps {
   routeCoordinates?: [number, number][];
+  originCoordinate?: LatLngTuple | null;
+  destinationCoordinate?: LatLngTuple | null;
 }
 
 const ECUADOR_CENTER: LatLngExpression = [-1.8312, -78.1834];
@@ -23,7 +25,11 @@ function RouteViewport({ coordinates }: { coordinates: LatLngTuple[] }) {
   return null;
 }
 
-export default function TripMap({ routeCoordinates }: TripMapProps) {
+export default function TripMap({
+  routeCoordinates,
+  originCoordinate,
+  destinationCoordinate,
+}: TripMapProps) {
   const routePath = useMemo<LatLngTuple[]>(
     () => routeCoordinates?.map(([longitude, latitude]) => [latitude, longitude]) ?? [],
     [routeCoordinates],
@@ -50,6 +56,22 @@ export default function TripMap({ routeCoordinates }: TripMapProps) {
             />
             <RouteViewport coordinates={routePath} />
           </>
+        )}
+
+        {originCoordinate && (
+          <CircleMarker
+            center={originCoordinate}
+            radius={9}
+            pathOptions={{ color: "#166534", fillColor: "#22c55e", fillOpacity: 1, weight: 3 }}
+          />
+        )}
+
+        {destinationCoordinate && (
+          <CircleMarker
+            center={destinationCoordinate}
+            radius={9}
+            pathOptions={{ color: "#991b1b", fillColor: "#ef4444", fillOpacity: 1, weight: 3 }}
+          />
         )}
       </MapContainer>
     </div>
