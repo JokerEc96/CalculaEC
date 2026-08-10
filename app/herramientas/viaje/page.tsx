@@ -185,14 +185,15 @@ export default function TripCalculatorPage() {
         throw new Error("No pudimos calcular una ruta entre esas ubicaciones.");
       }
 
-      const fuelResult = hasValidPrice
-        ? calculateTripFuel(data.distanceKm, parsedConsumption, selectedPrice)
-        : calculateFuelNeeded(data.distanceKm, parsedConsumption);
+      const { gallons } = calculateFuelNeeded(data.distanceKm, parsedConsumption);
+      const cost = hasValidPrice
+        ? calculateTripFuel(data.distanceKm, parsedConsumption, selectedPrice).cost
+        : null;
 
       setDistanceKm(data.distanceKm);
       setDurationMinutes(data.durationMinutes);
-      setFuelGallons(fuelResult.gallons);
-      setFuelCost(hasValidPrice ? fuelResult.cost : null);
+      setFuelGallons(gallons);
+      setFuelCost(cost);
       setRouteCoordinates(data.geometry.coordinates);
     } catch (routeError) {
       setError(
@@ -257,67 +258,3 @@ export default function TripCalculatorPage() {
                 <label htmlFor="destination" className="text-sm font-medium">¿A dónde vas?</label>
                 <input id="destination" name="destination" type="text" value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="Ciudad o ubicación" autoComplete="street-address" className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
               </div>
-
-              <div>
-                <label htmlFor="consumption" className="text-sm font-medium">Consumo de tu vehículo</label>
-                <input id="consumption" name="consumption" type="number" min="0.01" step="0.01" value={consumption} onChange={(event) => setConsumption(event.target.value)} placeholder="Ej. 40 km/galón" inputMode="decimal" className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none" />
-              </div>
-
-              <div>
-                <label htmlFor="fuel" className="text-sm font-medium">Tipo de combustible</label>
-                <select id="fuel" name="fuel" value={fuelType} onChange={(event) => setFuelType(event.target.value as FuelPriceRecord["type"])} className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm outline-none transition focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10 motion-reduce:transition-none">
-                  {fuelOptions.map((fuel) => <option key={fuel.value} value={fuel.value}>{fuel.label}</option>)}
-                </select>
-              </div>
-
-              <div className="space-y-1 text-xs text-[var(--muted)]" aria-live="polite">
-                {isLoadingPrices && <p>Cargando precios de combustible…</p>}
-                {fuelPricesError && <p role="status">{fuelPricesError}</p>}
-                {!isLoadingPrices && <p>{fuelSourceLabel}</p>}
-                {!isLoadingPrices && !fuelPricesError && !hasValidPrice && <p>Precio no disponible</p>}
-                {!isLoadingPrices && !fuelPricesError && hasValidPrice && selectedPrice !== null && (
-                  <p>Precio: ${selectedPrice.toFixed(2)}/gal</p>
-                )}
-                {selectedFuel?.source && <p>Fuente: {selectedFuel.source}</p>}
-                {selectedFuel?.sourceUrl && <p>Fuente: {selectedFuel.sourceUrl}</p>}
-                {selectedFuel?.updatedAt && <p>Actualizado: {selectedFuel.updatedAt}</p>}
-              </div>
-
-              {error && <p role="alert" className="rounded-2xl border border-[var(--border)] bg-[var(--cream)] px-4 py-3 text-sm text-[var(--wine)]">{error}</p>}
-
-              <button type="submit" disabled={isLoading} className="w-full rounded-2xl bg-[var(--wine)] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--wine-dark)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none motion-reduce:transition-none">
-                {isLoading ? "Calculando ruta…" : "Calcular viaje"}
-              </button>
-            </form>
-          </section>
-        </div>
-
-        <section className="mt-6 rounded-[2rem] border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7" aria-labelledby="results-title">
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">Resultado</p>
-              <h2 id="results-title" className="mt-2 text-xl font-semibold tracking-tight">Resumen del viaje</h2>
-            </div>
-            <span className="text-xs text-[var(--muted)]">{isLoading ? "Calculando…" : "Datos del recorrido"}</span>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Distancia", distanceKm === null ? "—" : `${distanceKm.toFixed(2)} km`],
-              ["Combustible estimado", fuelGallons === null ? "—" : `${fuelGallons.toFixed(2)} gal`],
-              ["Costo estimado", fuelCost === null ? "No disponible" : `$${fuelCost.toFixed(2)}`],
-              ["Duración", durationMinutes === null ? "—" : `${durationMinutes.toFixed(0)} min`],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-                <p className="text-xs text-[var(--muted)]">{label}</p>
-                <p className="mt-2 text-xl font-semibold tracking-tight">{value}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <p className="mt-6 text-center text-xs leading-5 text-[var(--muted)]">Los precios de combustible se actualizarán automáticamente cuando conectemos la fuente de datos.</p>
-      </div>
-    </main>
-  );
-}
