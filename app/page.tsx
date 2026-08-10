@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import ToolsSection from "@/components/ToolsSection";
 
 export default function Home() {
+  const [showTools, setShowTools] = useState(false);
+
   return (
     <main>
       <header className="flex items-center justify-between">
@@ -16,6 +19,7 @@ export default function Home() {
         </div>
 
         <button
+          onClick={() => setShowTools(!showTools)}
           className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
           Herramientas
@@ -40,16 +44,18 @@ export default function Home() {
 
       <ToolsSection />
 
-      <section className="mt-6 rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">
-          Más herramientas próximamente
-        </h2>
+      {showTools && (
+        <section className="mt-6 rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">
+            Más herramientas próximamente
+          </h2>
 
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          CalculaEC crecerá poco a poco con herramientas prácticas para
-          Ecuador.
-        </p>
-      </section>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            CalculaEC crecerá poco a poco con herramientas prácticas para
+            Ecuador.
+          </p>
+        </section>
+      )}
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-[var(--border)] bg-white p-5">
