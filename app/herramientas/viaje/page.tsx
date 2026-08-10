@@ -26,8 +26,17 @@ type FuelPrice = {
   name: string;
   pricePerGallon: number | null;
   currency: "USD";
-  source: string;
+  validFrom: string | null;
+  validUntil: string | null;
+  source: string | null;
+  sourceUrl: string | null;
   updatedAt: string | null;
+};
+
+type FuelPricesResponse = {
+  prices: FuelPrice[];
+  fetchedAt: string;
+  sourceStatus: "official" | "secondary" | "unavailable";
 };
 
 const fuelOptions = [
@@ -43,6 +52,7 @@ export default function TripCalculatorPage() {
   const [consumption, setConsumption] = useState("");
   const [fuelType, setFuelType] = useState<FuelType>("ecopais");
   const [fuelPrices, setFuelPrices] = useState<FuelPrice[]>([]);
+  const [fuelSourceStatus, setFuelSourceStatus] = useState<FuelPricesResponse["sourceStatus"]>("unavailable");
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
   const [fuelPricesError, setFuelPricesError] = useState<string | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
@@ -59,18 +69,30 @@ export default function TripCalculatorPage() {
     async function loadFuelPrices() {
       try {
         const response = await fetch("/api/fuel-prices");
-        const data = (await response.json()) as FuelPrice[] | { error?: string };
+        const data = (await response.json()) as FuelPricesResponse | { error?: string };
 
-        if (!response.ok || !Array.isArray(data)) {
+        if (
+          !response.ok ||
+          !data ||
+          !Array.isArray((data as FuelPricesResponse).prices) ||
+          typeof (data as FuelPricesResponse).fetchedAt !== "string" ||
+          !["official", "secondary", "unavailable"].includes(
+            (data as FuelPricesResponse).sourceStatus,
+          )
+        ) {
           throw new Error("No pudimos obtener los precios de combustible.");
         }
 
         if (!cancelled) {
-          setFuelPrices(data);
+          const fuelData = data as FuelPricesResponse;
+          setFuelPrices(fuelData.prices);
+          setFuelSourceStatus(fuelData.sourceStatus);
           setFuelPricesError(null);
         }
       } catch {
         if (!cancelled) {
+          setFuelPrices([]);
+          setFuelSourceStatus("unavailable");
           setFuelPricesError("No pudimos obtener los precios de combustible.");
         }
       } finally {
@@ -90,6 +112,13 @@ export default function TripCalculatorPage() {
   const selectedFuel = fuelPrices.find((fuel) => fuel.type === fuelType) ?? null;
   const selectedPrice = selectedFuel?.pricePerGallon ?? null;
   const hasValidPrice = selectedPrice !== null && Number.isFinite(selectedPrice) && selectedPrice > 0;
+
+  const fuelSourceLabel =
+    fuelSourceStatus === "official"
+      ? "Fuente oficial"
+      : fuelSourceStatus === "secondary"
+        ? "Fuente secundaria"
+        : "Precio temporalmente no disponible";
 
   async function geocodeLocation(query: string): Promise<GeocodeResult> {
     const params = new URLSearchParams({ q: query });
@@ -263,11 +292,13 @@ export default function TripCalculatorPage() {
               <div className="space-y-1 text-xs text-[var(--muted)]" aria-live="polite">
                 {isLoadingPrices && <p>Cargando precios de combustible…</p>}
                 {fuelPricesError && <p role="status">{fuelPricesError}</p>}
+                {!isLoadingPrices && <p>{fuelSourceLabel}</p>}
                 {!isLoadingPrices && !fuelPricesError && !hasValidPrice && <p>Precio no disponible</p>}
                 {!isLoadingPrices && !fuelPricesError && hasValidPrice && selectedPrice !== null && (
                   <p>Precio: ${selectedPrice.toFixed(2)}/gal</p>
                 )}
                 {selectedFuel?.source && <p>Fuente: {selectedFuel.source}</p>}
+                {selectedFuel?.sourceUrl && <p>Fuente: {selectedFuel.sourceUrl}</p>}
                 {selectedFuel?.updatedAt && <p>Actualizado: {selectedFuel.updatedAt}</p>}
               </div>
 
