@@ -1,6 +1,6 @@
 "use client";
 
-import type { LatLngExpression } from "leaflet";
+import type { LatLngExpression, LatLngTuple } from "leaflet";
 import { MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
 import { useEffect, useMemo } from "react";
 import "leaflet/dist/leaflet.css";
@@ -11,7 +11,7 @@ export interface TripMapProps {
 
 const ECUADOR_CENTER: LatLngExpression = [-1.8312, -78.1834];
 
-function RouteViewport({ coordinates }: { coordinates: LatLngExpression[] }) {
+function RouteViewport({ coordinates }: { coordinates: LatLngTuple[] }) {
   const map = useMap();
 
   useEffect(() => {
@@ -24,7 +24,7 @@ function RouteViewport({ coordinates }: { coordinates: LatLngExpression[] }) {
 }
 
 export default function TripMap({ routeCoordinates }: TripMapProps) {
-  const routePath = useMemo<LatLngExpression[]>(
+  const routePath = useMemo<LatLngTuple[]>(
     () => routeCoordinates?.map(([longitude, latitude]) => [latitude, longitude]) ?? [],
     [routeCoordinates],
   );
