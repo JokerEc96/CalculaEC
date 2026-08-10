@@ -14,7 +14,9 @@ const emptyPrices: FuelPriceRecord[] = [
 ];
 
 function hasValidPrices(response: FuelPricesResponse): boolean {
-  return response.prices.some((price) => price.pricePerGallon !== null && Number.isFinite(price.pricePerGallon) && price.pricePerGallon > 0);
+  return response.prices.length === 3 && response.prices.every(
+    (price) => price.pricePerGallon !== null && Number.isFinite(price.pricePerGallon) && price.pricePerGallon > 0,
+  );
 }
 
 function normalizeText(html: string): string {
