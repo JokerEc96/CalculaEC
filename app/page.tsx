@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ToolsSection from "@/components/ToolsSection";
+import InfoSection from "@/components/InfoSection";
 
 export default function Home() {
   const [showTools, setShowTools] = useState(false);
@@ -43,6 +44,7 @@ export default function Home() {
       </div>
 
       <ToolsSection />
+      <InfoSection />
 
       {showTools && (
         <section className="mt-6 rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
