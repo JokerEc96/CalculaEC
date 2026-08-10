@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 const navigation = [
+  { label: "Inicio", href: "#inicio" },
   { label: "Herramientas", href: "#herramientas" },
   { label: "Indicadores", href: "#indicadores" },
 ];
@@ -12,12 +13,15 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="relative flex items-center justify-between py-5">
+    <header className="relative flex items-center justify-between border-b border-[var(--border)] py-5">
       <Link
         href="/"
-        className="group flex items-center gap-2"
+        className="group flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2"
         aria-label="CalculaEC, inicio"
       >
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--wine)] text-sm font-bold text-white shadow-sm transition-transform duration-200 group-hover:-rotate-3 motion-reduce:transition-none">
+          C
+        </span>
         <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
           Calcula<span className="text-[var(--wine)]">EC</span>
         </span>
@@ -28,7 +32,7 @@ export default function Header() {
           <a
             key={item.href}
             href={item.href}
-            className="text-sm text-[var(--muted)] transition-colors duration-200 hover:text-[var(--wine)]"
+            className="rounded-md text-sm font-medium text-[var(--muted)] transition-colors duration-200 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
             {item.label}
           </a>
@@ -41,7 +45,7 @@ export default function Header() {
         aria-expanded={isOpen}
         aria-controls="mobile-navigation"
         aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-white text-[var(--foreground)] transition hover:-translate-y-0.5 hover:shadow-sm md:hidden"
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-white text-[var(--foreground)] transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2 md:hidden motion-reduce:transition-none"
       >
         <span className="sr-only">{isOpen ? "Cerrar menú" : "Abrir menú"}</span>
         <span className="flex w-4 flex-col gap-1" aria-hidden="true">
@@ -62,7 +66,7 @@ export default function Header() {
               key={item.href}
               href={item.href}
               onClick={() => setIsOpen(false)}
-              className="block rounded-xl px-4 py-3 text-sm text-[var(--muted)] transition-colors duration-200 hover:bg-[var(--cream)] hover:text-[var(--wine)]"
+              className="block rounded-xl px-4 py-3 text-sm font-medium text-[var(--muted)] transition-colors duration-200 hover:bg-[var(--cream)] hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-inset motion-reduce:transition-none"
             >
               {item.label}
             </a>
