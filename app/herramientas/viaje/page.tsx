@@ -1,10 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { calculateFuelNeeded, calculateTripFuel } from "@/lib/fuel";
 import type { FuelPriceRecord, FuelPricesResponse } from "@/lib/fuel-price-types";
-import TripMap from "@/components/TripMap";
+
+const TripMap = dynamic(() => import("@/components/TripMap"), {
+  ssr: false,
+});
 
 type GeocodeResult = {
   displayName: string;
