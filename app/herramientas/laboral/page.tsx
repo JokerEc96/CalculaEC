@@ -87,7 +87,9 @@ export default function LaboralPage() {
   }, [monthlySalary, region, months14, reserveMonths, reserveMode, hours25, hours50, hours100, profit, hrWorkerDays, hrFamilyCount, totalWorkerDays, totalFamilyFactor, thirteenthMode, monthlyRemunerations]);
 
   const workerBase = Math.max(0, Number(workerUtilityBase) || 0);
-  const workerCharges = Math.max(0, Number(workerUtilityCharges) || 0);
+  const workerChargesPerFamily = Math.max(0, Number(workerUtilityCharges) || 0);
+  const workerFamilyCountNumber = Math.min(5, Math.max(0, Number(workerFamilyCount) || 0));
+  const workerCharges = workerChargesPerFamily * workerFamilyCountNumber;
   const workerUtilityTotal = workerBase + workerCharges;
   const workerUtilityHasInput = workerUtilityBase.trim() !== "" || workerUtilityCharges.trim() !== "";
   const utilityReady = showUtilityAdvanced && Number(profit) > 0 && values.totalDays > 0 && values.factorB > 0;
@@ -151,16 +153,16 @@ export default function LaboralPage() {
               <div className="mt-5 rounded-2xl border border-[var(--wine)]/20 bg-[var(--wine)]/5 p-5">
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">👷</div>
-                  <div><h3 className="text-base font-semibold">Si eres trabajador</h3><p className="mt-1 text-sm leading-6 text-[var(--muted)]">Si tu empresa te informó, por ejemplo, <strong>Base (10%) $700</strong> y <strong>Cargas (5%) $500</strong>, coloca esos valores. No necesitas saber cuántos trabajadores tiene la empresa ni ningún dato de RR. HH.</p></div>
+                  <div><h3 className="text-base font-semibold">Si eres trabajador</h3><p className="mt-1 text-sm leading-6 text-[var(--muted)]">Si tu empresa te informó, por ejemplo, <strong>Base (10%) $700</strong> y <strong>Cargas (5%) $500 por cada carga</strong>, coloca esos valores. No necesitas saber cuántos trabajadores tiene la empresa ni ningún dato de RR. HH.</p></div>
                 </div>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <Field label="Base (10%) — tu valor ($)" value={workerUtilityBase} onChange={setWorkerUtilityBase} min={0} step="0.01" placeholder="700" help="El valor que te informó la empresa." />
                   <div className="grid grid-cols-[1fr_auto] items-start gap-2">
-                    <Field label="Cargas (5%) — tu valor ($)" value={workerUtilityCharges} onChange={setWorkerUtilityCharges} min={0} step="0.01" placeholder="500" help="Si tienes cargas familiares y la empresa te informó ese valor." />
-                    <label className="block"><span className="text-xs font-medium text-[var(--foreground)]">Cargas</span><select aria-label="Número de cargas familiares" value={workerFamilyCount} onChange={(event) => setWorkerFamilyCount(event.target.value)} className="mt-2 min-h-11 w-16 rounded-full border border-[var(--border)] bg-white px-2 text-center text-sm outline-none focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10">{Array.from({ length: 6 }, (_, index) => <option key={index} value={index}>{index}</option>)}</select></label>
+                    <Field label="Cargas (5%) — valor por cada carga ($)" value={workerUtilityCharges} onChange={setWorkerUtilityCharges} min={0} step="0.01" placeholder="500" help="Ingresa el valor que corresponde a una sola carga familiar." />
+                    <label className="block"><span className="text-xs font-medium text-[var(--foreground)]">N.º de cargas</span><select aria-label="Número de cargas familiares" value={workerFamilyCount} onChange={(event) => setWorkerFamilyCount(event.target.value)} className="mt-2 min-h-11 w-16 rounded-full border border-[var(--border)] bg-white px-2 text-center text-sm outline-none focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10">{Array.from({ length: 6 }, (_, index) => <option key={index} value={index}>{index}</option>)}</select></label>
                   </div>
                 </div>
-                <div className="mt-5 rounded-xl bg-white p-4"><p className="text-xs text-[var(--muted)]">Total de utilidades que recibirías</p><p className="mt-1 text-3xl font-semibold tracking-tight">{workerUtilityHasInput ? money.format(workerUtilityTotal) : "—"}</p>{!workerUtilityHasInput && <p className="mt-2 text-xs leading-5 text-[var(--muted)]">Ejemplo: $700 de Base + $500 de Cargas = $1.200.</p>}</div>
+                <div className="mt-5 rounded-xl bg-white p-4"><p className="text-xs text-[var(--muted)]">Total de utilidades que recibirías</p><p className="mt-1 text-3xl font-semibold tracking-tight">{workerUtilityHasInput ? money.format(workerUtilityTotal) : "—"}</p>{!workerUtilityHasInput && <p className="mt-2 text-xs leading-5 text-[var(--muted)]">Ejemplo: $700 de Base + ($500 × 3 cargas) = $2.200.</p>}</div>
               </div>
 
               <div className="mt-5 rounded-xl border border-[var(--border)] p-4">
