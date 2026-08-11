@@ -74,16 +74,16 @@ function buildOfficialResponse(html: string): FuelPricesResponse | null {
   const validity = parseValidity(text);
 
   const ecopais = findPrice(text, [
-    /ecopa[ií]s[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i,
-    /extra\s+con\s+etanol[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i,
+    /ecopa[ií]s[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}[.,]\d{1,3})/i,
+    /extra\s+con\s+etanol[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}[.,]\d{1,3})/i,
   ]);
   const superPrice = findPrice(text, [
-    /gasolina\s+s[uú]per[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i,
-    /s[uú]per[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i,
+    /gasolina\s+s[uú]per[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}[.,]\d{1,3})/i,
+    /s[uú]per[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}[.,]\d{1,3})/i,
   ]);
   const diesel = findPrice(text, [
-    /di[eé]sel\s+premium[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i,
-    /di[eé]sel[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i,
+    /di[eé]sel\s+premium[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}[.,]\d{1,3})/i,
+    /di[eé]sel[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}[.,]\d{1,3})/i,
   ]);
 
   const updatedAt = new Date().toISOString();
