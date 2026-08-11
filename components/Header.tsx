@@ -9,7 +9,7 @@ const navigation = [
   { label: "Indicadores", href: "#indicadores" },
 ];
 
-const originalLogo = "https://raw.githubusercontent.com/JokerEc96/CalculaEC/main/calculaec-logo-original.jpg";
+const originalLogo = "https://raw.githubusercontent.com/JokerEc96/CalculaEC/main/calculaec-logo-original.png";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
