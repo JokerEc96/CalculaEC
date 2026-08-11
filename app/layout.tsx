@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description:
     "Calculadoras, precios, indicadores y herramientas útiles para Ecuador.",
   icons: {
-    icon: "/calculaec-logo.svg",
-    shortcut: "/calculaec-logo.svg",
-    apple: "/calculaec-logo.svg",
+    icon: "/calculaec-logo-original.jpg",
+    shortcut: "/calculaec-logo-original.jpg",
+    apple: "/calculaec-logo-original.jpg",
   },
 };
 
