@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const originalLogo = "https://raw.githubusercontent.com/JokerEc96/CalculaEC/main/calculaec-logo-original.jpg";
+
 export const metadata: Metadata = {
   title: "CalculaEC | Herramientas para Ecuador",
   description:
     "Calculadoras, precios, indicadores y herramientas útiles para Ecuador.",
   icons: {
-    icon: "/calculaec-logo-original.jpg",
-    shortcut: "/calculaec-logo-original.jpg",
-    apple: "/calculaec-logo-original.jpg",
+    icon: originalLogo,
+    shortcut: originalLogo,
+    apple: originalLogo,
   },
 };
 
