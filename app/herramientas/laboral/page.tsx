@@ -40,6 +40,9 @@ export default function LaboralPage() {
   const [hours25, setHours25] = useState("0");
   const [hours50, setHours50] = useState("0");
   const [hours100, setHours100] = useState("0");
+  const [workerUtilityBase, setWorkerUtilityBase] = useState("");
+  const [workerUtilityCharges, setWorkerUtilityCharges] = useState("");
+  const [workerFamilyCount, setWorkerFamilyCount] = useState("0");
   const [thirteenthMode, setThirteenthMode] = useState<"base" | "monthly">("base");
   const [monthlyRemunerations, setMonthlyRemunerations] = useState<string[]>(Array.from({ length: 12 }, () => "482"));
 
@@ -67,6 +70,13 @@ export default function LaboralPage() {
       annualRemuneration,
     };
   }, [monthlySalary, region, months14, reserveMonths, reserveMode, hours25, hours50, hours100, thirteenthMode, monthlyRemunerations]);
+
+  const workerBase = Math.max(0, Number(workerUtilityBase) || 0);
+  const workerChargesPerFamily = Math.max(0, Number(workerUtilityCharges) || 0);
+  const workerFamilyCountNumber = Math.min(5, Math.max(0, Number(workerFamilyCount) || 0));
+  const workerCharges = workerChargesPerFamily * workerFamilyCountNumber;
+  const workerUtilityTotal = workerBase + workerCharges;
+  const workerUtilityHasInput = workerUtilityBase.trim() !== "" || workerUtilityCharges.trim() !== "";
 
   return (
     <main className="min-h-screen bg-[var(--background)]">
@@ -126,9 +136,28 @@ export default function LaboralPage() {
             <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
               <h2 className="text-xl font-semibold">⏱️ Horas extra</h2><p className="mt-1 text-sm text-[var(--muted)]">Base horaria: sueldo mensual ÷ 240. La jornada nocturna tiene 25% de recargo; las horas suplementarias 50% y las extraordinarias 100%, según corresponda.</p><div className="mt-4 grid gap-4 sm:grid-cols-3"><Field label="Horas nocturnas · 25%" value={hours25} onChange={setHours25} step="1" /><Field label="Horas al 50%" value={hours50} onChange={setHours50} step="1" /><Field label="Horas al 100%" value={hours100} onChange={setHours100} step="1" /></div><div className="mt-4 grid gap-3 sm:grid-cols-3"><Result label="Valor hora nocturna · 25%" value={money.format(values.hourly.night)} /><Result label="Valor hora al 50%" value={money.format(values.hourly.supplementary)} /><Result label="Valor hora al 100%" value={money.format(values.hourly.extraordinary)} /></div><div className="mt-3"><Result label="Total estimado de horas con recargo" value={money.format(values.overtime)} /></div>
             </section>
+
+            <section className="rounded-2xl border border-[var(--border)] bg-white p-5 lg:col-span-2">
+              <h2 className="text-xl font-semibold">💰 Utilidades</h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Si tu empresa ya te dio los valores, solo los sumas. No necesitas saber cuántos trabajadores tiene la empresa ni datos de RR. HH.</p>
+              <div className="mt-5 rounded-2xl border border-[var(--wine)]/20 bg-[var(--wine)]/5 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">👷</div>
+                  <div><h3 className="text-base font-semibold">Si eres trabajador</h3><p className="mt-1 text-sm leading-6 text-[var(--muted)]">Si tu empresa te informó, por ejemplo, <strong>Base (10%) $700</strong> y <strong>Cargas (5%) $500 por cada carga</strong>, coloca esos valores.</p></div>
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <Field label="Base (10%) — tu valor ($)" value={workerUtilityBase} onChange={setWorkerUtilityBase} min={0} step="0.01" placeholder="700" help="El valor que te informó la empresa." />
+                  <div className="grid grid-cols-[1fr_auto] items-start gap-2">
+                    <Field label="Cargas (5%) — valor por cada carga ($)" value={workerUtilityCharges} onChange={setWorkerUtilityCharges} min={0} step="0.01" placeholder="500" help="Ingresa el valor que corresponde a una sola carga familiar." />
+                    <label className="block"><span className="text-xs font-medium text-[var(--foreground)]">N.º de cargas</span><select aria-label="Número de cargas familiares" value={workerFamilyCount} onChange={(event) => setWorkerFamilyCount(event.target.value)} className="mt-2 min-h-11 w-16 rounded-full border border-[var(--border)] bg-white px-2 text-center text-sm outline-none focus:border-[var(--wine)] focus:ring-2 focus:ring-[var(--wine)]/10">{Array.from({ length: 6 }, (_, index) => <option key={index} value={index}>{index}</option>)}</select></label>
+                  </div>
+                </div>
+                <div className="mt-5 rounded-xl bg-white p-4"><p className="text-xs text-[var(--muted)]">Total de utilidades que recibirías</p><p className="mt-1 text-3xl font-semibold tracking-tight">{workerUtilityHasInput ? money.format(workerUtilityTotal) : "—"}</p>{!workerUtilityHasInput && <p className="mt-2 text-xs leading-5 text-[var(--muted)]">Ejemplo: $700 de Base + ($500 × 3 cargas) = $2.200.</p>}</div>
+              </div>
+            </section>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-[var(--wine)]/15 bg-[var(--wine)]/5 p-5 text-sm leading-6 text-[var(--muted)]"><strong className="text-[var(--foreground)]">Importante:</strong> esta herramienta es referencial. Para una liquidación definitiva deben utilizarse los valores reales de tus roles de pago.</div>
+          <div className="mt-6 rounded-2xl border border-[var(--wine)]/15 bg-[var(--wine)]/5 p-5 text-sm leading-6 text-[var(--muted)]"><strong className="text-[var(--foreground)]">Importante:</strong> esta herramienta es referencial. Para una liquidación definitiva deben utilizarse los valores reales de tus roles de pago y, cuando se trate de utilidades, los datos oficiales del reparto de la empresa.</div>
         </section>
       </div>
     </main>
