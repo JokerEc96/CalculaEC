@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const originalLogo = "https://raw.githubusercontent.com/JokerEc96/CalculaEC/main/calculaec-logo-original.jpg";
+const originalLogo = "https://raw.githubusercontent.com/JokerEc96/CalculaEC/main/calculaec-logo-original.png";
 
 export const metadata: Metadata = {
   title: "CalculaEC | Herramientas para Ecuador",
