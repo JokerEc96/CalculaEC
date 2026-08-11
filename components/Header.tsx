@@ -9,13 +9,15 @@ const navigation = [
   { label: "Indicadores", href: "#indicadores" },
 ];
 
+const originalLogo = "https://raw.githubusercontent.com/JokerEc96/CalculaEC/main/calculaec-logo-original.jpg";
+
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <header className="relative flex items-center justify-between border-b border-[var(--border)] py-3">
       <Link href="/" className="group flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2" aria-label="CalculaEC, inicio">
-        <img src="/calculaec-logo-original.jpg" alt="CalculaEC — Herramientas que facilitan tu día" className="h-16 w-16 object-contain transition-transform duration-200 group-hover:scale-[1.03] motion-reduce:transition-none sm:h-[72px] sm:w-[72px]" />
+        <img src={originalLogo} alt="CalculaEC — Herramientas que facilitan tu día" className="h-16 w-16 object-contain transition-transform duration-200 group-hover:scale-[1.03] motion-reduce:transition-none sm:h-[72px] sm:w-[72px]" />
       </Link>
       <nav className="hidden items-center gap-8 md:flex" aria-label="Navegación principal">
         {navigation.map((item) => <a key={item.href} href={item.href} className="rounded-md text-sm font-medium text-[var(--muted)] transition-colors duration-200 hover:text-[var(--wine)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2 motion-reduce:transition-none">{item.label}</a>)}
