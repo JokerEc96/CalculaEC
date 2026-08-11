@@ -36,7 +36,7 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
 
   try {
     await sql`
-      CREATE TABLE IF NOT EXISTS fuel_prices (
+      CREATE TABLE IF NOT EXISTS fuel_prices_v2 (
         fuel_type TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         price_per_gallon DOUBLE PRECISION NOT NULL,
@@ -64,7 +64,7 @@ export async function getCachedFuelPrices(): Promise<CachedFuelPrices | null> {
         updated_at::text,
         saved_at::text,
         source_status
-      FROM fuel_prices
+      FROM fuel_prices_v2
       ORDER BY fuel_type
     `) as unknown as CachedFuelPriceRow[];
 
@@ -104,7 +104,7 @@ export async function setCachedFuelPrices(data: CachedFuelPrices): Promise<void>
 
   try {
     await sql`
-      CREATE TABLE IF NOT EXISTS fuel_prices (
+      CREATE TABLE IF NOT EXISTS fuel_prices_v2 (
         fuel_type TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         price_per_gallon DOUBLE PRECISION NOT NULL,
@@ -121,7 +121,7 @@ export async function setCachedFuelPrices(data: CachedFuelPrices): Promise<void>
 
     for (const price of validPrices) {
       await sql`
-        INSERT INTO fuel_prices (
+        INSERT INTO fuel_prices_v2 (
           fuel_type, name, price_per_gallon, currency, valid_from, valid_until,
           source, source_url, updated_at, saved_at, source_status
         ) VALUES (
