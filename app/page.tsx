@@ -56,31 +56,30 @@ export default function Home() {
                 </div>
 
                 <div className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-                  <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-                    <span>Guayaquil</span><span>Quito</span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Distancia del viaje</p>
+                      <p className="mt-1 text-2xl font-semibold tracking-tight">150 <span className="text-sm font-medium text-[var(--muted)]">km</span></p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-semibold text-[var(--wine)]">Ejemplo</span>
                   </div>
-                  <div className="relative mt-5 h-14" aria-hidden="true">
-                    <div className="absolute left-2 right-2 top-6 border-t border-dashed border-[var(--wine)]/35" />
-                    <span className="absolute left-0 top-3 h-7 w-7 rounded-full border-4 border-white bg-[var(--wine)] shadow-sm" />
-                    <span className="absolute right-0 top-3 h-7 w-7 rounded-full border-4 border-white bg-[var(--wine)] shadow-sm" />
-                    <span className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--wine)]" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-xl bg-white p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Distancia</p>
-                      <p className="mt-1 text-lg font-semibold">— km</p>
+                      <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Consumo</p>
+                      <p className="mt-1 text-lg font-semibold">30 <span className="text-xs font-medium text-[var(--muted)]">km/gal</span></p>
                     </div>
                     <div className="rounded-xl bg-white p-3">
                       <p className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Combustible</p>
-                      <p className="mt-1 text-lg font-semibold">— gal</p>
+                      <p className="mt-1 text-lg font-semibold">5,00 <span className="text-xs font-medium text-[var(--muted)]">gal</span></p>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between rounded-2xl bg-[var(--wine)] p-4 text-white">
                   <div>
-                    <p className="text-xs text-white/70">Listo para calcular</p>
-                    <p className="mt-1 text-sm font-semibold">Tu recorrido, en segundos.</p>
+                    <p className="text-xs text-white/70">Así funciona</p>
+                    <p className="mt-1 text-sm font-semibold">Kilómetros → combustible → costo</p>
                   </div>
                   <span className="text-xl" aria-hidden="true">→</span>
                 </div>
