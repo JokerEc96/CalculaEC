@@ -13,18 +13,17 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="relative flex items-center justify-between border-b border-[var(--border)] py-5">
+    <header className="relative flex items-center justify-between border-b border-[var(--border)] py-3">
       <Link
         href="/"
-        className="group flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2"
+        className="group flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wine)] focus-visible:ring-offset-2"
         aria-label="CalculaEC, inicio"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--wine)] text-sm font-bold text-white shadow-sm transition-transform duration-200 group-hover:-rotate-3 motion-reduce:transition-none">
-          C
-        </span>
-        <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
-          Calcula<span className="text-[var(--wine)]">EC</span>
-        </span>
+        <img
+          src="/calculaec-logo.svg"
+          alt="CalculaEC — Herramientas que facilitan tu día"
+          className="h-16 w-16 object-contain transition-transform duration-200 group-hover:scale-[1.03] motion-reduce:transition-none sm:h-[72px] sm:w-[72px]"
+        />
       </Link>
 
       <nav className="hidden items-center gap-8 md:flex" aria-label="Navegación principal">
