@@ -65,9 +65,9 @@ function parseArticle(html: string, source: string, sourceUrl: string): FuelPric
   const validity = parseValidity(text);
   const updatedAt = new Date().toISOString();
   const prices: FuelPriceRecord[] = [
-    { type: "ecopais", name: "Ecopaís", pricePerGallon: findPrice(text, [/ecopa[ií]s[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i, /extra\s+y\s+ecopa[ií]s[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i]), currency: "USD", ...validity, source, sourceUrl, updatedAt },
-    { type: "super", name: "Súper", pricePerGallon: findPrice(text, [/gasolina\s+s[uú]per[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i, /s[uú]per[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i]), currency: "USD", ...validity, source, sourceUrl, updatedAt },
-    { type: "diesel", name: "Diésel Premium", pricePerGallon: findPrice(text, [/di[eé]sel\s+premium[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i, /di[eé]sel[^$\d]{0,120}(?:USD\s*)?\$?\s*(\d{1,2}(?:[.,]\d{1,3})?)/i]), currency: "USD", ...validity, source, sourceUrl, updatedAt },
+    { type: "ecopais", name: "Ecopaís", pricePerGallon: findPrice(text, [/ecopa[ií]s[^$\d]{0,120}(?:USD\s*|\$\s*)(\d{1,2}(?:[.,]\d{1,3})?)/i, /extra\s+y\s+ecopa[ií]s[^$\d]{0,120}(?:USD\s*|\$\s*)(\d{1,2}(?:[.,]\d{1,3})?)/i]), currency: "USD", ...validity, source, sourceUrl, updatedAt },
+    { type: "super", name: "Súper", pricePerGallon: findPrice(text, [/gasolina\s+s[uú]per[^$\d]{0,120}(?:USD\s*|\$\s*)(\d{1,2}(?:[.,]\d{1,3})?)/i, /s[uú]per[^$\d]{0,120}(?:USD\s*|\$\s*)(\d{1,2}(?:[.,]\d{1,3})?)/i]), currency: "USD", ...validity, source, sourceUrl, updatedAt },
+    { type: "diesel", name: "Diésel Premium", pricePerGallon: findPrice(text, [/di[eé]sel\s+premium[^$\d]{0,120}(?:USD\s*|\$\s*)(\d{1,2}(?:[.,]\d{1,3})?)/i, /di[eé]sel[^$\d]{0,120}(?:USD\s*|\$\s*)(\d{1,2}(?:[.,]\d{1,3})?)/i]), currency: "USD", ...validity, source, sourceUrl, updatedAt },
   ];
   const validUntil = validity.validUntil ? Date.parse(validity.validUntil) : null;
   if (!prices.some((price) => price.pricePerGallon !== null && price.pricePerGallon > 0)) return null;
