@@ -39,3 +39,8 @@ cursor: pointer;
 background: var(--wine);
 color: white;
 }
+
+/* Viaje: en Solo ida no repetir la distancia total; en Ida y vuelta se muestran ambas. */
+main:has([aria-label="Tipo de viaje"] button:first-child[aria-pressed="true"]) section[aria-labelledby="results-title"] > div:nth-child(2) > div:nth-child(2) {
+  display: none;
+}
